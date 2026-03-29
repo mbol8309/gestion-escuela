@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { useState } from 'react';
 import api from '../../services/api';
-import { ArrowLeft, Pencil, X, Download } from 'lucide-react';
+import { ArrowLeft, Pencil, X, Download, Mail, CheckCircle } from 'lucide-react';
 
 function StatusBadge({ status }) {
   const map = {
@@ -81,6 +81,12 @@ export default function StudentDetail() {
   const queryClient = useQueryClient();
   const [showEdit, setShowEdit] = useState(false);
   const [diplomaEnrollment, setDiplomaEnrollment] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const prevSearch = location.state?.searchParams || '';
 
@@ -94,6 +100,12 @@ export default function StudentDetail() {
   const finishMutation = useMutation({
     mutationFn: (enrollmentId) => api.put(`/enrollments/${enrollmentId}/finish`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['student', id] }),
+  });
+
+  const sendActivationMutation = useMutation({
+    mutationFn: () => api.post(`/students/${id}/send-activation`),
+    onSuccess: () => showToast('Email de activación enviado correctamente'),
+    onError: (err) => showToast(err.response?.data?.error || 'Error al enviar el email', 'error'),
   });
 
   const openEdit = () => {
@@ -163,12 +175,28 @@ export default function StudentDetail() {
               {student.phone && <p>Tel: {student.phone}</p>}
             </div>
           </div>
-          <button
-            onClick={openEdit}
-            className="flex items-center gap-2 border rounded-lg px-4 py-2 text-sm hover:bg-gray-50"
-          >
-            <Pencil size={16} /> Editar
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={openEdit}
+              className="flex items-center gap-2 border rounded-lg px-4 py-2 text-sm hover:bg-gray-50"
+            >
+              <Pencil size={16} /> Editar
+            </button>
+            {!student.userId && (
+              <button
+                onClick={() => sendActivationMutation.mutate()}
+                disabled={sendActivationMutation.isPending}
+                className="flex items-center gap-2 border border-indigo-300 text-indigo-600 rounded-lg px-4 py-2 text-sm hover:bg-indigo-50 disabled:opacity-50"
+              >
+                <Mail size={16} /> {sendActivationMutation.isPending ? 'Enviando...' : 'Enviar activación'}
+              </button>
+            )}
+            {student.userId && (
+              <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                <CheckCircle size={14} /> Cuenta activa
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -277,6 +305,14 @@ export default function StudentDetail() {
       {/* Diploma modal */}
       {diplomaEnrollment && (
         <DiplomaModal enrollment={diplomaEnrollment} onClose={() => setDiplomaEnrollment(null)} />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
+          {toast.type === 'error' ? <X size={16} /> : <CheckCircle size={16} />}
+          {toast.msg}
+        </div>
       )}
     </div>
   );
