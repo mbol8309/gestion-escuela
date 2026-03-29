@@ -191,8 +191,19 @@ router.put('/activate/:token', async (req, res) => {
     });
     if (!student) return res.status(400).json({ error: 'Invalid or expired token' });
 
-    const { password, ...profileData } = req.body;
+    const { password, firstName, lastName, phone, address, birthDate } = req.body;
     if (!password) return res.status(400).json({ error: 'Password required' });
+
+    // Solo permitir campos seguros del alumno
+    const profileData = {};
+    if (firstName) profileData.firstName = firstName;
+    if (lastName) profileData.lastName = lastName;
+    if (phone !== undefined) profileData.phone = phone;
+    if (address !== undefined) profileData.address = address;
+    if (birthDate) {
+      const d = new Date(birthDate);
+      if (!isNaN(d.getTime())) profileData.birthDate = d;
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
