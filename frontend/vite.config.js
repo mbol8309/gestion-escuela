@@ -19,3 +19,4 @@ export default defineConfig({
     },
   },
 })
+// test config handled in vitest.config.js

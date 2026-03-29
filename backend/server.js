@@ -9,7 +9,9 @@ const app = express();
 
 app.use(cors({ origin: ['http://localhost:5173', 'http://127.0.0.1:5173'] }));
 app.use(express.json());
-app.use(morgan('[:date[iso]] :method :url :status :response-time ms'));
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('[:date[iso]] :method :url :status :response-time ms'));
+}
 app.use('/uploads', express.static('uploads'));
 
 // Routes
@@ -23,20 +25,24 @@ app.use('/api/templates', require('./src/routes/templates'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-const PORT = process.env.PORT || 3001;
-
-async function start() {
-  await sequelize.sync({ alter: false });
-
-  // Seed admin
+async function seedAdmin() {
   const exists = await User.findOne({ where: { email: 'admin@admin.com' } });
   if (!exists) {
     const passwordHash = await bcrypt.hash('admin', 10);
     await User.create({ email: 'admin@admin.com', passwordHash, role: 'admin', active: true });
-    console.log('✅ Admin user created: admin@admin.com / admin');
   }
+}
 
+async function start() {
+  await sequelize.sync({ alter: false });
+  await seedAdmin();
+  const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 }
 
-start().catch(console.error);
+// Solo arrancar si es el entry point directo
+if (require.main === module) {
+  start().catch(console.error);
+}
+
+module.exports = { app, sequelize, seedAdmin };
