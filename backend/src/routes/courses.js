@@ -23,14 +23,27 @@ router.post('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
 
 router.get('/:id', auth, async (req, res) => {
   try {
+    const { page = 1, limit = 30, status } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Curso básico + plantillas (rápido)
     const course = await Course.findByPk(req.params.id, {
-      include: [
-        { model: Enrollment, attributes: ['id', 'status', 'startDate', 'endDate', 'finishedAt'], include: [{ model: Student, attributes: ['id', 'firstName', 'lastName', 'email'] }] },
-        { model: DiplomaTemplate, attributes: ['id', 'name', 'type'] },
-      ],
+      include: [{ model: DiplomaTemplate, attributes: ['id', 'name', 'type'] }],
     });
     if (!course) return res.status(404).json({ error: 'Not found' });
-    res.json(course);
+
+    // Enrollments paginados (separado para evitar timeout)
+    const enrollmentWhere = { courseId: req.params.id };
+    if (status) enrollmentWhere.status = status;
+    const { count, rows: enrollments } = await Enrollment.findAndCountAll({
+      where: enrollmentWhere,
+      include: [{ model: Student, attributes: ['id', 'firstName', 'lastName', 'email', 'dni'] }],
+      limit: parseInt(limit),
+      offset,
+      order: [['startDate', 'DESC']],
+    });
+
+    res.json({ ...course.toJSON(), Enrollments: enrollments, enrollmentTotal: count, page: parseInt(page) });
   } catch (err) {
     console.error('[GET /courses/:id]', err.message);
     res.status(500).json({ error: err.message });
