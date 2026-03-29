@@ -22,7 +22,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 const PORT = process.env.PORT || 3001;
 
 async function start() {
-  await sequelize.sync({ alter: true });
+  await sequelize.sync({ alter: false });
 
   // Seed admin
   const exists = await User.findOne({ where: { email: 'admin@admin.com' } });
