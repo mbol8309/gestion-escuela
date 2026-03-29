@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Course, CourseEdition, Enrollment, DiplomaTemplate } = require('../models');
+const { Course, Enrollment, DiplomaTemplate } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const { uploadTemplate, listTemplates } = require('../controllers/templateController');

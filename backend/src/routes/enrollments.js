@@ -1,14 +1,13 @@
 const router = require('express').Router();
-const { Enrollment, Student, CourseEdition, Course } = require('../models');
+const { Enrollment, Student, Course } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 
 router.get('/', auth, async (req, res) => {
   try {
-    const { status, editionId, courseId, startDateFrom, startDateTo } = req.query;
+    const { status, courseId, startDateFrom, startDateTo } = req.query;
     const where = {};
     if (status) where.status = status;
-    if (editionId) where.editionId = editionId;
     if (courseId) where.courseId = courseId;
     if (startDateFrom || startDateTo) {
       where.startDate = {};
@@ -26,11 +25,7 @@ router.get('/', auth, async (req, res) => {
       include: [
         { model: Student, attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Course, attributes: ['id', 'name'] },
-        {
-          model: CourseEdition,
-          required: false,
-          include: [{ model: Course, attributes: ['id', 'name'] }],
-        },
+
       ],
       order: [['requestedAt', 'DESC']],
     });

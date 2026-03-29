@@ -4,7 +4,6 @@ const sequelize = require('../config/database');
 const Enrollment = sequelize.define('Enrollment', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   studentId: { type: DataTypes.UUID, allowNull: false },
-  editionId: { type: DataTypes.UUID, allowNull: true },
   courseId: { type: DataTypes.UUID, allowNull: true },
   status: {
     type: DataTypes.STRING,

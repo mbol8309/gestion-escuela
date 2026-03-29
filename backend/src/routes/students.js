@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { Student, User, Enrollment, CourseEdition, Course, AppConfig, sequelize } = require('../models');
+const { Student, User, Enrollment, Course, AppConfig, sequelize } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const { sendActivationEmail } = require('../services/emailService');
@@ -83,7 +83,6 @@ router.get('/:id', auth, async (req, res) => {
         model: Enrollment,
         include: [
           Course,
-          { model: CourseEdition, include: [Course], required: false },
         ],
       }],
     });
