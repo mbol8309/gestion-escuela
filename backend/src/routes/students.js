@@ -17,7 +17,7 @@ const getTTL = async () => {
 
 router.get('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
   try {
-    const { search, page = 1, limit = 20, status } = req.query;
+    const { search, page = 1, limit = 20, status, courseId, enrollmentStatus, startDateFrom, startDateTo } = req.query;
     const where = {};
     if (search) {
       where[Op.or] = [
@@ -29,12 +29,24 @@ router.get('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
     }
     if (status) where.status = status;
     const offset = (parseInt(page) - 1) * parseInt(limit);
-    const { count, rows } = await Student.findAndCountAll({
-      where,
-      limit: parseInt(limit),
-      offset,
-      order: [['lastName', 'ASC']],
-    });
+
+    const options = { where, limit: parseInt(limit), offset, order: [['lastName', 'ASC']] };
+
+    if (courseId || enrollmentStatus || startDateFrom || startDateTo) {
+      const enrollmentWhere = {};
+      if (courseId) enrollmentWhere.courseId = courseId;
+      if (enrollmentStatus) enrollmentWhere.status = enrollmentStatus;
+      if (startDateFrom || startDateTo) {
+        enrollmentWhere.startDate = {};
+        if (startDateFrom) enrollmentWhere.startDate[Op.gte] = new Date(startDateFrom);
+        if (startDateTo) enrollmentWhere.startDate[Op.lte] = new Date(startDateTo);
+      }
+      options.include = [{ model: Enrollment, where: enrollmentWhere, required: true, include: [Course] }];
+    } else {
+      options.include = [{ model: Enrollment, required: false, include: [Course] }];
+    }
+
+    const { count, rows } = await Student.findAndCountAll(options);
     res.json({ total: count, page: parseInt(page), data: rows });
   } catch (err) {
     console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);

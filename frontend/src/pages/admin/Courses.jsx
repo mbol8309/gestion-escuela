@@ -44,13 +44,13 @@ export default function Courses() {
 
   const openCreate = () => {
     setEditing(null);
-    reset({ name: '', description: '', active: true });
+    reset({ name: '', description: '' });
     setShowModal(true);
   };
 
   const openEdit = (c) => {
     setEditing(c);
-    reset({ name: c.name, description: c.description || '', active: c.active });
+    reset({ name: c.name, description: c.description || '' });
     setShowModal(true);
   };
 
@@ -72,21 +72,6 @@ export default function Courses() {
       key: 'name',
       label: 'Nombre',
       render: (c) => <span className="font-medium">{c.name}</span>,
-    },
-    {
-      key: 'editions',
-      label: 'Ediciones',
-      hideOnMobile: true,
-      render: (c) => <span className="text-gray-500">{c.CourseEditions?.length ?? c._editionCount ?? '—'}</span>,
-    },
-    {
-      key: 'active',
-      label: 'Estado',
-      render: (c) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-          {c.active ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
     },
     {
       key: 'actions',
@@ -142,10 +127,6 @@ export default function Courses() {
             <div>
               <label className="block text-sm font-medium mb-1">Descripción</label>
               <textarea {...register('description')} rows={3} className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none" />
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" {...register('active')} id="active" className="rounded" />
-              <label htmlFor="active" className="text-sm">Activo</label>
             </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowModal(false)} className="flex-1 border rounded-lg py-2 text-sm hover:bg-gray-50">Cancelar</button>

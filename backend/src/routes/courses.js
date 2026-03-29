@@ -1,14 +1,13 @@
 const router = require('express').Router();
-const { Course, Enrollment, DiplomaTemplate } = require('../models');
+const { Course, Enrollment, DiplomaTemplate, Student } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const { uploadTemplate, listTemplates } = require('../controllers/templateController');
 
 router.get('/', auth, async (req, res) => {
-  const { search, active } = req.query;
+  const { search } = req.query;
   const where = {};
   if (search) where.name = { [Op.like]: `%${search}%` };
-  if (active !== undefined) where.active = active === 'true';
   const courses = await Course.findAll({ where, order: [['createdAt', 'DESC']] });
   res.json(courses);
 });
@@ -23,14 +22,19 @@ router.post('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
 });
 
 router.get('/:id', auth, async (req, res) => {
-  const course = await Course.findByPk(req.params.id, {
-    include: [{
-      model: CourseEdition,
-      include: [{ model: Enrollment, attributes: ['id'] }],
-    }],
-  });
-  if (!course) return res.status(404).json({ error: 'Not found' });
-  res.json(course);
+  try {
+    const course = await Course.findByPk(req.params.id, {
+      include: [
+        { model: Enrollment, attributes: ['id', 'status', 'startDate', 'endDate', 'finishedAt'], include: [{ model: Student, attributes: ['id', 'firstName', 'lastName', 'email'] }] },
+        { model: DiplomaTemplate, attributes: ['id', 'name', 'type'] },
+      ],
+    });
+    if (!course) return res.status(404).json({ error: 'Not found' });
+    res.json(course);
+  } catch (err) {
+    console.error('[GET /courses/:id]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.put('/:id', auth, requireRole('admin', 'gestor'), async (req, res) => {

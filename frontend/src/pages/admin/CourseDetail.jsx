@@ -46,7 +46,7 @@ export default function CourseDetail() {
   } = useForm();
 
   const openEdit = () => {
-    reset({ name: course.name, description: course.description || '', active: course.active });
+    reset({ name: course.name, description: course.description || '' });
     setShowEdit(true);
   };
 
@@ -72,8 +72,7 @@ export default function CourseDetail() {
     queryClient.invalidateQueries({ queryKey: ['templates', id] });
   };
 
-  if (isLoading) {
-    return (
+  if (isLoading) {    return (
       <div className="space-y-4">
         <div className="h-8 bg-gray-200 rounded animate-pulse w-48" />
         <div className="bg-white rounded-xl shadow p-6 space-y-3">
@@ -96,7 +95,7 @@ export default function CourseDetail() {
     );
   }
 
-  const editions = course.CourseEditions || [];
+  const enrollments = course.Enrollments || [];
 
   return (
     <div className="space-y-6">
@@ -110,9 +109,6 @@ export default function CourseDetail() {
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-gray-900">{course.name}</h1>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${course.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                {course.active ? 'Activo' : 'Inactivo'}
-              </span>
             </div>
             {course.description && (
               <p className="mt-2 text-sm text-gray-600">{course.description}</p>
@@ -170,29 +166,32 @@ export default function CourseDetail() {
         )}
       </div>
 
-      {/* Editions */}
-      <div className="space-y-3">
-        <h2 className="font-semibold text-gray-800 px-1">Ediciones (historial)</h2>
-        {editions.length === 0 ? (
-          <div className="bg-white rounded-xl shadow p-8 text-center text-gray-400 text-sm">
-            Sin ediciones registradas
-          </div>
+      {/* Enrollments */}
+      <div className="bg-white rounded-xl shadow">
+        <div className="px-6 py-4 border-b flex justify-between items-center">
+          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+            <Users size={18} /> Alumnos inscritos ({enrollments.length})
+          </h2>
+        </div>
+        {enrollments.length === 0 ? (
+          <p className="text-center py-8 text-gray-400 text-sm">Sin alumnos inscritos</p>
         ) : (
-          editions.map((ed) => (
-            <div key={ed.id} className="bg-white rounded-xl shadow p-5">
-              <div className="flex justify-between items-start flex-wrap gap-3">
+          <div className="divide-y">
+            {enrollments.map((enr) => (
+              <div key={enr.id} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/admin/alumnos/${enr.Student?.id}`)}>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{ed.year || ed.name || `Edición ${ed.id}`}</h3>
-                  <div className="mt-1 flex gap-4 text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Users size={12} />
-                      {ed.Enrollments?.length ?? 0} inscritos
-                    </span>
-                  </div>
+                  <p className="font-medium text-sm">{enr.Student?.firstName} {enr.Student?.lastName}</p>
+                  <p className="text-xs text-gray-400">{enr.Student?.email}</p>
                 </div>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  enr.status === 'enrolled' ? 'bg-green-100 text-green-700' :
+                  enr.status === 'finished' ? 'bg-blue-100 text-blue-700' :
+                  enr.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-gray-100 text-gray-500'
+                }`}>{enr.status}</span>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
 
@@ -208,10 +207,6 @@ export default function CourseDetail() {
             <div>
               <label className="block text-sm font-medium mb-1">Descripción</label>
               <textarea {...register('description')} rows={3} className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none" />
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" {...register('active')} id="active-edit" className="rounded" />
-              <label htmlFor="active-edit" className="text-sm">Activo</label>
             </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowEdit(false)} className="flex-1 border rounded-lg py-2 text-sm hover:bg-gray-50">Cancelar</button>

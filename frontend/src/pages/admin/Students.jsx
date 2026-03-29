@@ -5,7 +5,7 @@ import { useState } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../components/ToastProvider';
 import ResponsiveTable from '../../components/ResponsiveTable';
-import { Plus, Search, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, ChevronLeft, ChevronRight, X, Pencil, Trash2, Filter } from 'lucide-react';
 
 function Modal({ title, onClose, children }) {
   return (
@@ -30,10 +30,14 @@ export default function Students() {
   const { toast } = useToast();
   const search = searchParams.get('search') || '';
   const courseId = searchParams.get('courseId') || '';
+  const enrollmentStatus = searchParams.get('enrollmentStatus') || '';
+  const startDateFrom = searchParams.get('startDateFrom') || '';
+  const startDateTo = searchParams.get('startDateTo') || '';
   const page = parseInt(searchParams.get('page') || '1');
 
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
 
   const {
     register,
@@ -60,15 +64,14 @@ export default function Students() {
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['students', search, courseId, page],
+    queryKey: ['students', search, courseId, enrollmentStatus, startDateFrom, startDateTo, page],
     queryFn: () =>
-      api.get('/students', { params: { search, courseId, page, limit: LIMIT } }).then((r) => r.data),
+      api.get('/students', { params: { search, courseId, enrollmentStatus, startDateFrom, startDateTo, page, limit: LIMIT } }).then((r) => r.data),
   });
 
   const { data: courses = [] } = useQuery({
     queryKey: ['courses'],
     queryFn: () => api.get('/courses').then((r) => r.data),
-    enabled: showModal,
   });
 
   const totalPages = Math.ceil((data?.total ?? 0) / LIMIT);
@@ -143,17 +146,97 @@ export default function Students() {
       </div>
 
       <div className="bg-white rounded-xl shadow">
-        <div className="p-4 border-b flex gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setFilter('search', e.target.value)}
-              placeholder="Buscar por nombre, email, DNI..."
-              className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
-            />
+        <div className="p-4 border-b space-y-3">
+          <div className="flex gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search}
+                onChange={(e) => setFilter('search', e.target.value)}
+                placeholder="Buscar por nombre, email, DNI..."
+                className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm ${showFilters || courseId || enrollmentStatus || startDateFrom || startDateTo ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'hover:bg-gray-50'}`}
+            >
+              <Filter size={15} /> Filtros
+              {(courseId || enrollmentStatus || startDateFrom || startDateTo) && (
+                <span className="bg-indigo-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  {[courseId, enrollmentStatus, startDateFrom || startDateTo].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+            <span className="self-center text-sm text-gray-500">{data?.total ?? 0} alumnos</span>
           </div>
-          <span className="self-center text-sm text-gray-500">{data?.total ?? 0} alumnos</span>
+
+          {showFilters && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Curso</label>
+                <select
+                  value={courseId}
+                  onChange={(e) => setFilter('courseId', e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                >
+                  <option value="">Todos los cursos</option>
+                  {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Estado inscripción</label>
+                <select
+                  value={enrollmentStatus}
+                  onChange={(e) => setFilter('enrollmentStatus', e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                >
+                  <option value="">Todos</option>
+                  <option value="enrolled">Activos (enrolled)</option>
+                  <option value="finished">Terminados</option>
+                  <option value="pending">Pendientes</option>
+                  <option value="draft">Borrador</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Inscripción desde</label>
+                <input
+                  type="date"
+                  value={startDateFrom}
+                  onChange={(e) => setFilter('startDateFrom', e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Inscripción hasta</label>
+                <input
+                  type="date"
+                  value={startDateTo}
+                  onChange={(e) => setFilter('startDateTo', e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+              {(courseId || enrollmentStatus || startDateFrom || startDateTo) && (
+                <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
+                  <button
+                    onClick={() => {
+                      setSearchParams((prev) => {
+                        prev.delete('courseId');
+                        prev.delete('enrollmentStatus');
+                        prev.delete('startDateFrom');
+                        prev.delete('startDateTo');
+                        prev.set('page', '1');
+                        return prev;
+                      });
+                    }}
+                    className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
+                  >
+                    <X size={14} /> Limpiar filtros
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <ResponsiveTable
