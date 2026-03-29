@@ -207,7 +207,9 @@ router.put('/activate/:token', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Buscar user existente por userId o por email (por si fue recreado)
     let user = student.userId ? await User.findByPk(student.userId) : null;
+    if (!user) user = await User.findOne({ where: { email: student.email } });
     if (!user) {
       user = await User.create({
         email: student.email,
@@ -217,7 +219,7 @@ router.put('/activate/:token', async (req, res) => {
         active: true,
       });
     } else {
-      await user.update({ passwordHash });
+      await user.update({ passwordHash, active: true, studentId: student.id });
     }
 
     await Enrollment.update(
