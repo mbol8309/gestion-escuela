@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useState } from 'react';
 import api from '../../services/api';
+import { useToast } from '../../components/ToastProvider';
 import ResponsiveTable from '../../components/ResponsiveTable';
 import { Plus, Search, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from 'lucide-react';
 
@@ -26,6 +27,7 @@ export default function Students() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
   const search = searchParams.get('search') || '';
   const courseId = searchParams.get('courseId') || '';
   const page = parseInt(searchParams.get('page') || '1');
@@ -85,11 +87,17 @@ export default function Students() {
       phone: formData.phone,
       enrollments: formData.enrollments.filter((e) => e.courseId),
     };
-    await api.post('/students', payload);
-    setShowModal(false);
-    setStep(1);
-    reset({ enrollments: [] });
-    queryClient.invalidateQueries({ queryKey: ['students'] });
+    try {
+      await api.post('/students', payload);
+      setShowModal(false);
+      setStep(1);
+      reset({ enrollments: [] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      toast('Alumno creado correctamente');
+    } catch (err) {
+      // api interceptor fires api-error event; no duplicate toast needed here
+      // but suppress default to avoid double message for 409
+    }
   };
 
   const openModal = () => {

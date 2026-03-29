@@ -17,6 +17,9 @@ api.interceptors.response.use(
     if (err.response?.status === 401) {
       useAuthStore.getState().logout();
       window.location.href = '/login';
+    } else {
+      const msg = err.response?.data?.error || err.response?.data?.message || 'Error inesperado';
+      window.dispatchEvent(new CustomEvent('api-error', { detail: msg }));
     }
     return Promise.reject(err);
   }

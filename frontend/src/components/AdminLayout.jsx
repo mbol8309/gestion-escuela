@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { LayoutDashboard, BookOpen, Users, ClipboardList, LogOut, Menu, X, ChevronLeft, Settings } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, ClipboardList, LogOut, Menu, X, ChevronLeft, Settings, UserCog } from 'lucide-react';
 
 export default function AdminLayout() {
   const { user, logout } = useAuthStore();
@@ -17,6 +17,7 @@ export default function AdminLayout() {
     { to: '/admin/alumnos', icon: Users, label: 'Alumnos' },
     { to: '/admin/inscripciones', icon: ClipboardList, label: 'Inscripciones' },
     { to: '/admin/configuracion', icon: Settings, label: 'Configuración' },
+    ...(user?.role === 'admin' ? [{ to: '/admin/usuarios', icon: UserCog, label: 'Gestores' }] : []),
   ];
 
   const SidebarContent = () => (

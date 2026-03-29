@@ -3,17 +3,19 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { useState } from 'react';
 import api from '../../services/api';
-import { ArrowLeft, Pencil, X, Download, Mail, CheckCircle } from 'lucide-react';
+import { useToast } from '../../components/ToastProvider';
+import { useAuthStore } from '../../store/authStore';
+import { ArrowLeft, Pencil, X, Download, Mail, CheckCircle, Plus, Trash2 } from 'lucide-react';
 
 function StatusBadge({ status }) {
   const map = {
-    enrolled: { label: 'Matriculado', cls: 'bg-green-100 text-green-700' },
+    draft: { label: 'Borrador', cls: 'bg-gray-100 text-gray-600' },
     pending: { label: 'Pendiente', cls: 'bg-yellow-100 text-yellow-700' },
+    enrolled: { label: 'Matriculado', cls: 'bg-green-100 text-green-700' },
+    active: { label: 'Activo', cls: 'bg-blue-100 text-blue-700' },
     finished: { label: 'Finalizado', cls: 'bg-blue-100 text-blue-700' },
     rejected: { label: 'Rechazado', cls: 'bg-red-100 text-red-700' },
-    // legacy
     completed: { label: 'Completado', cls: 'bg-green-100 text-green-700' },
-    active: { label: 'En curso', cls: 'bg-yellow-100 text-yellow-700' },
     approved: { label: 'Aprobado', cls: 'bg-green-100 text-green-700' },
   };
   const s = map[status] || { label: status, cls: 'bg-gray-100 text-gray-600' };
@@ -74,19 +76,105 @@ function DiplomaModal({ enrollment, onClose }) {
   );
 }
 
+function AssignCourseModal({ studentId, onClose, onSuccess }) {
+  const [courseId, setCourseId] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const { data: courses = [], isLoading } = useQuery({
+    queryKey: ['courses'],
+    queryFn: () => api.get('/courses').then((r) => r.data),
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!courseId || !startDate) { setError('Selecciona curso y fecha de inicio'); return; }
+    setSaving(true);
+    try {
+      await api.post('/enrollments', {
+        studentId,
+        courseId,
+        startDate,
+        endDate: endDate || null,
+        status: 'pending',
+      });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al asignar curso');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal title="➕ Asignar curso" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <p className="text-red-500 text-sm bg-red-50 rounded p-2">{error}</p>}
+        <div>
+          <label className="block text-sm font-medium mb-1">Curso *</label>
+          {isLoading ? (
+            <p className="text-sm text-gray-400">Cargando...</p>
+          ) : (
+            <select
+              value={courseId}
+              onChange={e => setCourseId(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              required
+            >
+              <option value="">— Selecciona un curso —</option>
+              {courses.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Fecha inicio *</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={e => setStartDate(e.target.value)}
+            required
+            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Fecha fin (opcional)</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border rounded-lg py-2 text-sm hover:bg-gray-50">Cancelar</button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm hover:bg-indigo-700 disabled:opacity-60"
+          >
+            {saving ? 'Asignando...' : 'Asignar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export default function StudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuthStore();
   const [showEdit, setShowEdit] = useState(false);
   const [diplomaEnrollment, setDiplomaEnrollment] = useState(null);
-  const [toast, setToast] = useState(null);
-
-  const showToast = (msg, type = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
-  };
+  const [showAssignCourse, setShowAssignCourse] = useState(false);
 
   const prevSearch = location.state?.searchParams || '';
 
@@ -99,13 +187,29 @@ export default function StudentDetail() {
 
   const finishMutation = useMutation({
     mutationFn: (enrollmentId) => api.put(`/enrollments/${enrollmentId}/finish`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['student', id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student', id] });
+      toast('Curso marcado como terminado');
+    },
+    onError: (err) => toast(err.response?.data?.error || 'Error al terminar curso', 'error'),
   });
 
   const sendActivationMutation = useMutation({
     mutationFn: () => api.post(`/students/${id}/send-activation`),
-    onSuccess: () => showToast('Email de activación enviado correctamente'),
-    onError: (err) => showToast(err.response?.data?.error || 'Error al enviar el email', 'error'),
+    onSuccess: () => {
+      toast('Email de activación enviado correctamente');
+      queryClient.invalidateQueries({ queryKey: ['student', id] });
+    },
+    onError: (err) => toast(err.response?.data?.error || 'Error al enviar el email', 'error'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/students/${id}`),
+    onSuccess: () => {
+      toast('Alumno eliminado');
+      navigate(`/admin/alumnos${prevSearch ? '?' + prevSearch : ''}`);
+    },
+    onError: (err) => toast(err.response?.data?.error || 'Error al eliminar alumno', 'error'),
   });
 
   const openEdit = () => {
@@ -120,14 +224,25 @@ export default function StudentDetail() {
   };
 
   const onSubmit = async (formData) => {
-    await api.put(`/students/${id}`, formData);
-    setShowEdit(false);
-    queryClient.invalidateQueries({ queryKey: ['student', id] });
-    queryClient.invalidateQueries({ queryKey: ['students'] });
+    try {
+      await api.put(`/students/${id}`, formData);
+      setShowEdit(false);
+      queryClient.invalidateQueries({ queryKey: ['student', id] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      toast('Datos actualizados');
+    } catch (err) {
+      toast(err.response?.data?.error || 'Error al guardar', 'error');
+    }
   };
 
   const goBack = () => {
     navigate(`/admin/alumnos${prevSearch ? '?' + prevSearch : ''}`);
+  };
+
+  const handleDelete = () => {
+    if (confirm(`¿Eliminar al alumno ${student.firstName} ${student.lastName}? Esta acción no se puede deshacer.`)) {
+      deleteMutation.mutate();
+    }
   };
 
   if (isLoading) {
@@ -168,7 +283,10 @@ export default function StudentDetail() {
       <div className="bg-white rounded-xl shadow p-6">
         <div className="flex justify-between items-start flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{student.firstName} {student.lastName}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900">{student.firstName} {student.lastName}</h1>
+              <StatusBadge status={student.status || 'draft'} />
+            </div>
             <div className="mt-2 space-y-1 text-sm text-gray-600">
               <p>{student.email}</p>
               {student.dni && <p>DNI: {student.dni}</p>}
@@ -196,14 +314,29 @@ export default function StudentDetail() {
                 <CheckCircle size={14} /> Cuenta activa
               </span>
             )}
+            {user?.role === 'admin' && (
+              <button
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="flex items-center gap-2 border border-red-300 text-red-600 rounded-lg px-4 py-2 text-sm hover:bg-red-50 disabled:opacity-50"
+              >
+                <Trash2 size={16} /> {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar alumno'}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Enrollments */}
       <div className="bg-white rounded-xl shadow">
-        <div className="px-6 py-4 border-b">
+        <div className="px-6 py-4 border-b flex justify-between items-center">
           <h2 className="font-semibold text-gray-800">Cursos y diplomas</h2>
+          <button
+            onClick={() => setShowAssignCourse(true)}
+            className="flex items-center gap-1 text-sm text-indigo-600 border border-indigo-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50"
+          >
+            <Plus size={14} /> Asignar curso
+          </button>
         </div>
         {enrollments.length === 0 ? (
           <p className="text-center py-10 text-gray-400 text-sm">Sin inscripciones</p>
@@ -302,17 +435,21 @@ export default function StudentDetail() {
         </Modal>
       )}
 
+      {/* Assign course modal */}
+      {showAssignCourse && (
+        <AssignCourseModal
+          studentId={id}
+          onClose={() => setShowAssignCourse(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['student', id] });
+            toast('Curso asignado correctamente');
+          }}
+        />
+      )}
+
       {/* Diploma modal */}
       {diplomaEnrollment && (
         <DiplomaModal enrollment={diplomaEnrollment} onClose={() => setDiplomaEnrollment(null)} />
-      )}
-
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
-          {toast.type === 'error' ? <X size={16} /> : <CheckCircle size={16} />}
-          {toast.msg}
-        </div>
       )}
     </div>
   );

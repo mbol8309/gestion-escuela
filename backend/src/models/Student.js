@@ -14,6 +14,7 @@ const Student = sequelize.define('Student', {
   phone: { type: DataTypes.STRING },
   address: { type: DataTypes.STRING },
   birthDate: { type: DataTypes.DATE },
+  status: { type: DataTypes.STRING, defaultValue: 'draft' },
   activationToken: { type: DataTypes.STRING },
   activationTokenExpiry: { type: DataTypes.DATE },
   userId: { type: DataTypes.UUID, allowNull: true },

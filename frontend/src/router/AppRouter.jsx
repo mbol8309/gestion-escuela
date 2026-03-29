@@ -11,6 +11,7 @@ import StudentDetail from '../pages/admin/StudentDetail';
 import CourseDetail from '../pages/admin/CourseDetail';
 import ConfigPage from '../pages/admin/ConfigPage';
 import TemplateEditor from '../pages/admin/TemplateEditor';
+import UsersPage from '../pages/admin/UsersPage';
 import MyCourses from '../pages/portal/MyCourses';
 import Profile from '../pages/portal/Profile';
 import AdminLayout from '../components/AdminLayout';
@@ -41,6 +42,7 @@ export default function AppRouter() {
           <Route path="cursos/:id/plantillas/:templateId" element={<TemplateEditor />} />
           <Route path="inscripciones" element={<Enrollments />} />
           <Route path="configuracion" element={<ConfigPage />} />
+          <Route path="usuarios" element={<UsersPage />} />
         </Route>
 
         <Route path="/portal" element={<RequireAuth roles={['alumno']}><PortalLayout /></RequireAuth>}>

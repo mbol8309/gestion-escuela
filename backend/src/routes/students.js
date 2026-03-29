@@ -17,7 +17,7 @@ const getTTL = async () => {
 
 router.get('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
   try {
-    const { search, page = 1, limit = 20 } = req.query;
+    const { search, page = 1, limit = 20, status } = req.query;
     const where = {};
     if (search) {
       where[Op.or] = [
@@ -27,6 +27,7 @@ router.get('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
         { dni: { [Op.like]: `%${search}%` } },
       ];
     }
+    if (status) where.status = status;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { count, rows } = await Student.findAndCountAll({
       where,
@@ -36,6 +37,7 @@ router.get('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
     });
     res.json({ total: count, page: parseInt(page), data: rows });
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -66,6 +68,10 @@ router.post('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
     res.status(201).json(full);
   } catch (err) {
     await t.rollback();
+    console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
+    if (err.name === 'SequelizeUniqueConstraintError' || (err.message && err.message.includes('UNIQUE'))) {
+      return res.status(409).json({ error: 'Ya existe un alumno con ese email' });
+    }
     res.status(400).json({ error: err.message });
   }
 });
@@ -84,6 +90,7 @@ router.get('/:id', auth, async (req, res) => {
     if (!student) return res.status(404).json({ error: 'Not found' });
     res.json(student);
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -95,21 +102,52 @@ router.put('/:id', auth, async (req, res) => {
     await student.update(req.body);
     res.json(student);
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/:id', auth, requireRole('admin'), async (req, res) => {
+  try {
+    const student = await Student.findByPk(req.params.id);
+    if (!student) return res.status(404).json({ error: 'Not found' });
+    await Enrollment.destroy({ where: { studentId: req.params.id } });
+    if (student.userId) await User.destroy({ where: { id: student.userId } });
+    await student.destroy();
+    res.json({ message: 'Student deleted' });
+  } catch (err) {
+    console.error(`[DELETE /students/${req.params.id}]`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
 router.post('/:id/send-activation', auth, requireRole('admin', 'gestor'), async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    const student = await Student.findByPk(req.params.id);
-    if (!student) return res.status(404).json({ error: 'Not found' });
+    const student = await Student.findByPk(req.params.id, { transaction: t });
+    if (!student) { await t.rollback(); return res.status(404).json({ error: 'Not found' }); }
+
+    // Create enrollments if passed
+    const { enrollments } = req.body;
+    if (Array.isArray(enrollments) && enrollments.length > 0) {
+      for (const enr of enrollments) {
+        if (!enr.courseId) continue;
+        await Enrollment.create({
+          studentId: student.id,
+          courseId: enr.courseId,
+          startDate: enr.startDate || null,
+          endDate: enr.endDate || null,
+          status: 'pending',
+        }, { transaction: t });
+      }
+    }
 
     const ttlHours = await getTTL();
     const token = crypto.randomBytes(32).toString('hex');
     const expiry = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
-    await student.update({ activationToken: token, activationTokenExpiry: expiry });
+    await student.update({ activationToken: token, activationTokenExpiry: expiry, status: 'pending' }, { transaction: t });
+    await t.commit();
 
-    const activationUrl = `${process.env.FRONTEND_URL}/activate/${token}`;
     try {
       const [academyCfg, baseUrlCfg] = await Promise.all([
         AppConfig.findOne({ where: { key: 'academy_name' } }),
@@ -126,9 +164,11 @@ router.post('/:id/send-activation', auth, requireRole('admin', 'gestor'), async 
       });
       res.json({ message: 'Activation email sent' });
     } catch (err) {
-      res.status(500).json({ error: 'Email error: ' + err.message, activationUrl });
+      res.status(500).json({ error: 'Email error: ' + err.message });
     }
   } catch (err) {
+    await t.rollback();
+    console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -150,7 +190,6 @@ router.put('/activate/:token', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Check if user already exists (re-activation case)
     let user = student.userId ? await User.findByPk(student.userId) : null;
     if (!user) {
       user = await User.create({
@@ -164,7 +203,6 @@ router.put('/activate/:token', async (req, res) => {
       await user.update({ passwordHash });
     }
 
-    // Move all pending enrollments → enrolled
     await Enrollment.update(
       { status: 'enrolled' },
       { where: { studentId: student.id, status: 'pending' } }
@@ -173,12 +211,14 @@ router.put('/activate/:token', async (req, res) => {
     await student.update({
       ...profileData,
       userId: user.id,
+      status: 'active',
       activationToken: null,
       activationTokenExpiry: null,
     });
 
     res.json({ message: 'Account activated successfully' });
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -198,7 +238,6 @@ router.get('/activate/:token', async (req, res) => {
     });
     if (!student) return res.status(400).json({ error: 'Invalid or expired token' });
 
-    // Return safe fields (no sensitive info)
     res.json({
       firstName: student.firstName,
       lastName: student.lastName,
@@ -210,6 +249,7 @@ router.get('/activate/:token', async (req, res) => {
       Enrollments: student.Enrollments,
     });
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
