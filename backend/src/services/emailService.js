@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendActivationEmail({ to, firstName, activationUrl, ttlHours, academyName }) {
   return resend.emails.send({
-    from: `${academyName || 'Academia'} <onboarding@resend.dev>`,
+    from: `${academyName || 'Academia'} <noreply@miguesync.es>`,
     to,
     subject: 'Completa tu inscripción',
     html: `
@@ -26,7 +26,7 @@ async function sendActivationEmail({ to, firstName, activationUrl, ttlHours, aca
 
 async function sendDiplomaEmail({ to, firstName, academyName, courseName, pdfBuffer, fileName }) {
   return resend.emails.send({
-    from: `${academyName || 'Academia'} <onboarding@resend.dev>`,
+    from: `${academyName || 'Academia'} <noreply@miguesync.es>`,
     to,
     subject: `Tu diploma — ${courseName}`,
     html: `
