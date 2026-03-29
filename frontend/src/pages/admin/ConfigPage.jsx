@@ -74,6 +74,17 @@ export default function ConfigPage() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium mb-1">URL base del sitio</label>
+            <input
+              {...register('base_url')}
+              type="url"
+              className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              placeholder="http://100.117.252.96"
+            />
+            <p className="text-xs text-gray-400 mt-1">URL que se incluye en los emails de activación para que el alumno acceda al sitio</p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium mb-1">Email remitente (smtp_from)</label>
             <input
               {...register('smtp_from')}

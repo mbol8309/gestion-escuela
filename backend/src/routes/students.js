@@ -111,11 +111,16 @@ router.post('/:id/send-activation', auth, requireRole('admin', 'gestor'), async 
 
     const activationUrl = `${process.env.FRONTEND_URL}/activate/${token}`;
     try {
-      const academyCfg = await AppConfig.findOne({ where: { key: 'academy_name' } });
+      const [academyCfg, baseUrlCfg] = await Promise.all([
+        AppConfig.findOne({ where: { key: 'academy_name' } }),
+        AppConfig.findOne({ where: { key: 'base_url' } }),
+      ]);
+      const baseUrl = baseUrlCfg?.value || process.env.FRONTEND_URL;
+      const activationUrlFinal = `${baseUrl}/activate/${token}`;
       await sendActivationEmail({
         to: student.email,
         firstName: student.firstName,
-        activationUrl,
+        activationUrl: activationUrlFinal,
         ttlHours,
         academyName: academyCfg?.value || 'Academia',
       });
