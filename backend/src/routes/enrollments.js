@@ -42,9 +42,21 @@ router.get('/', auth, async (req, res) => {
 
 router.post('/', auth, async (req, res) => {
   try {
-    const enrollment = await Enrollment.create(req.body);
+    const { studentId, courseId, startDate, endDate } = req.body;
+    if (!studentId || !courseId) {
+      return res.status(400).json({ error: 'studentId y courseId son requeridos' });
+    }
+    const enrollment = await Enrollment.create({
+      studentId,
+      courseId,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      status: 'pending',
+      requestedAt: new Date(),
+    });
     res.status(201).json(enrollment);
   } catch (err) {
+    console.error('[POST /enrollments]', err.message);
     res.status(400).json({ error: err.message });
   }
 });

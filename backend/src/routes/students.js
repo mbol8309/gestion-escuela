@@ -111,12 +111,15 @@ router.delete('/:id', auth, requireRole('admin'), async (req, res) => {
   try {
     const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json({ error: 'Not found' });
+    // Soft delete enrollments (paranoid)
     await Enrollment.destroy({ where: { studentId: req.params.id } });
-    if (student.userId) await User.destroy({ where: { id: student.userId } });
+    // Deactivate user but don't hard delete it
+    if (student.userId) await User.update({ active: false }, { where: { id: student.userId } });
+    // Soft delete student (paranoid)
     await student.destroy();
     res.json({ message: 'Student deleted' });
   } catch (err) {
-    console.error(`[DELETE /students/${req.params.id}]`, err.message);
+    console.error('[DELETE /students/' + req.params.id + ']', err.message);
     res.status(500).json({ error: err.message });
   }
 });

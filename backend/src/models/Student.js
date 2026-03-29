@@ -2,11 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const Student = sequelize.define('Student', {
-  id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
-    primaryKey: true,
-  },
+  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   firstName: { type: DataTypes.STRING, allowNull: false },
   lastName: { type: DataTypes.STRING, allowNull: false },
   dni: { type: DataTypes.STRING },
@@ -18,6 +14,9 @@ const Student = sequelize.define('Student', {
   activationToken: { type: DataTypes.STRING },
   activationTokenExpiry: { type: DataTypes.DATE },
   userId: { type: DataTypes.UUID, allowNull: true },
+  deletedAt: { type: DataTypes.DATE, allowNull: true },
+}, {
+  paranoid: true,
 });
 
 module.exports = Student;
