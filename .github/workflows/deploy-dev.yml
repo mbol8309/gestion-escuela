@@ -1,0 +1,77 @@
+name: Deploy to Raspberry Pi (dev)
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 3
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-src
+          path: |
+            backend/
+            !backend/node_modules/
+            !backend/database.sqlite
+            !backend/uploads/
+          retention-days: 3
+
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: /tmp/deploy/frontend
+
+      - name: Download backend
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-src
+          path: /tmp/deploy/backend
+
+      - name: Deploy frontend
+        run: |
+          rsync -av --delete /tmp/deploy/frontend/ /srv/projects/gestion-escuela/frontend/
+
+      - name: Deploy backend
+        run: |
+          rsync -av --delete \
+            --exclude='database.sqlite' \
+            --exclude='uploads/' \
+            /tmp/deploy/backend/ /srv/projects/gestion-escuela/backend/
+          cd /srv/projects/gestion-escuela/backend
+          npm install --omit=dev
+
+      - name: Restart service
+        run: sudo systemctl restart gestion-escuela-api
+
+      - name: Cleanup
+        run: rm -rf /tmp/deploy

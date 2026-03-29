@@ -121,6 +121,9 @@ export default function AdminLayout() {
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <Outlet />
         </main>
+        <footer className="flex-shrink-0 bg-white border-t px-4 py-2 text-xs text-gray-400 text-right">
+          Gestión Escuela v{__APP_VERSION__}
+        </footer>
       </div>
     </div>
   );
