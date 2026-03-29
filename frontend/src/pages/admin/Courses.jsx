@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { useState } from 'react';
 import api from '../../services/api';
-import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
+import ResponsiveTable from '../../components/ResponsiveTable';
+import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold">{title}</h2>
@@ -18,40 +21,91 @@ function Modal({ title, onClose, children }) {
 }
 
 export default function Courses() {
-  const [courses, setCourses] = useState([]);
-  const [search, setSearch] = useState('');
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get('search') || '';
+
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm();
 
-  const load = async () => {
-    const res = await api.get('/courses', { params: { search } });
-    setCourses(res.data);
+  const setFilter = (key, value) => {
+    setSearchParams((prev) => {
+      if (value) prev.set(key, value); else prev.delete(key);
+      return prev;
+    });
   };
 
-  useEffect(() => { load(); }, [search]);
+  const { data: courses = [], isLoading } = useQuery({
+    queryKey: ['courses', search],
+    queryFn: () => api.get('/courses', { params: { search } }).then((r) => r.data),
+  });
 
-  const openCreate = () => { setEditing(null); reset({ name: '', description: '', active: true }); setShowModal(true); };
-  const openEdit = (c) => { setEditing(c); reset({ name: c.name, description: c.description, active: c.active }); setShowModal(true); };
+  const openCreate = () => {
+    setEditing(null);
+    reset({ name: '', description: '', active: true });
+    setShowModal(true);
+  };
+
+  const openEdit = (c) => {
+    setEditing(c);
+    reset({ name: c.name, description: c.description || '', active: c.active });
+    setShowModal(true);
+  };
 
   const onSubmit = async (data) => {
     if (editing) await api.put(`/courses/${editing.id}`, data);
     else await api.post('/courses', data);
     setShowModal(false);
-    load();
+    queryClient.invalidateQueries({ queryKey: ['courses'] });
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar curso?')) return;
+    if (!window.confirm('¿Eliminar curso?')) return;
     await api.delete(`/courses/${id}`);
-    load();
+    queryClient.invalidateQueries({ queryKey: ['courses'] });
   };
+
+  const columns = [
+    {
+      key: 'name',
+      label: 'Nombre',
+      render: (c) => <span className="font-medium">{c.name}</span>,
+    },
+    {
+      key: 'editions',
+      label: 'Ediciones',
+      hideOnMobile: true,
+      render: (c) => <span className="text-gray-500">{c.CourseEditions?.length ?? c._editionCount ?? '—'}</span>,
+    },
+    {
+      key: 'active',
+      label: 'Estado',
+      render: (c) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+          {c.active ? 'Activo' : 'Inactivo'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      label: '',
+      isAction: true,
+      render: (c) => (
+        <div className="flex gap-2 justify-end">
+          <button onClick={(e) => { e.stopPropagation(); openEdit(c); }} className="p-1.5 hover:bg-gray-100 rounded"><Pencil size={16} /></button>
+          <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }} className="p-1.5 hover:bg-red-50 text-red-500 rounded"><Trash2 size={16} /></button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Cursos</h1>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+        <button onClick={openCreate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm">
           <Plus size={18} /> Nuevo curso
         </button>
       </div>
@@ -60,40 +114,21 @@ export default function Courses() {
         <div className="p-4 border-b flex gap-3">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cursos..."
-              className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm" />
+            <input
+              value={search}
+              onChange={(e) => setFilter('search', e.target.value)}
+              placeholder="Buscar cursos..."
+              className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
+            />
           </div>
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
-            <tr>
-              <th className="text-left px-4 py-3">Nombre</th>
-              <th className="text-left px-4 py-3">Descripción</th>
-              <th className="text-left px-4 py-3">Estado</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {courses.map((c) => (
-              <tr key={c.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{c.name}</td>
-                <td className="px-4 py-3 text-gray-500 truncate max-w-xs">{c.description}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {c.active ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 flex gap-2 justify-end">
-                  <button onClick={() => openEdit(c)} className="p-1.5 hover:bg-gray-100 rounded"><Pencil size={16} /></button>
-                  <button onClick={() => handleDelete(c.id)} className="p-1.5 hover:bg-red-50 text-red-500 rounded"><Trash2 size={16} /></button>
-                </td>
-              </tr>
-            ))}
-            {courses.length === 0 && (
-              <tr><td colSpan={4} className="text-center py-8 text-gray-400">No hay cursos</td></tr>
-            )}
-          </tbody>
-        </table>
+
+        <ResponsiveTable
+          columns={columns}
+          data={courses}
+          loading={isLoading}
+          onRowClick={(c) => navigate(`/admin/cursos/${c.id}`)}
+        />
       </div>
 
       {showModal && (

@@ -7,6 +7,8 @@ import Dashboard from '../pages/admin/Dashboard';
 import Courses from '../pages/admin/Courses';
 import Students from '../pages/admin/Students';
 import Enrollments from '../pages/admin/Enrollments';
+import StudentDetail from '../pages/admin/StudentDetail';
+import CourseDetail from '../pages/admin/CourseDetail';
 import MyCourses from '../pages/portal/MyCourses';
 import Profile from '../pages/portal/Profile';
 import AdminLayout from '../components/AdminLayout';
@@ -32,6 +34,8 @@ export default function AppRouter() {
           <Route index element={<Dashboard />} />
           <Route path="cursos" element={<Courses />} />
           <Route path="alumnos" element={<Students />} />
+          <Route path="alumnos/:id" element={<StudentDetail />} />
+          <Route path="cursos/:id" element={<CourseDetail />} />
           <Route path="inscripciones" element={<Enrollments />} />
         </Route>
 

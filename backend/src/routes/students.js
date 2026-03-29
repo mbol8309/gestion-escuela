@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { Student, User } = require('../models');
+const { Student, User, Enrollment, CourseEdition, Course } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const nodemailer = require('nodemailer');
@@ -44,7 +44,12 @@ router.post('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
 });
 
 router.get('/:id', auth, async (req, res) => {
-  const student = await Student.findByPk(req.params.id);
+  const student = await Student.findByPk(req.params.id, {
+    include: [{
+      model: Enrollment,
+      include: [{ model: CourseEdition, include: [Course] }],
+    }],
+  });
   if (!student) return res.status(404).json({ error: 'Not found' });
   res.json(student);
 });

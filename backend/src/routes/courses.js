@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Course } = require('../models');
+const { Course, CourseEdition, Enrollment } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 
@@ -22,7 +22,12 @@ router.post('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
 });
 
 router.get('/:id', auth, async (req, res) => {
-  const course = await Course.findByPk(req.params.id);
+  const course = await Course.findByPk(req.params.id, {
+    include: [{
+      model: CourseEdition,
+      include: [{ model: Enrollment, attributes: ['id'] }],
+    }],
+  });
   if (!course) return res.status(404).json({ error: 'Not found' });
   res.json(course);
 });
