@@ -4,14 +4,7 @@ const bcrypt = require('bcryptjs');
 const { Student, User, Enrollment, CourseEdition, Course, AppConfig, sequelize } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
-const nodemailer = require('nodemailer');
-
-const getTransporter = () =>
-  nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-  });
+const { sendActivationEmail } = require('../services/emailService');
 
 const getTTL = async () => {
   try {
@@ -118,11 +111,13 @@ router.post('/:id/send-activation', auth, requireRole('admin', 'gestor'), async 
 
     const activationUrl = `${process.env.FRONTEND_URL}/activate/${token}`;
     try {
-      await getTransporter().sendMail({
-        from: process.env.EMAIL_FROM,
+      const academyCfg = await AppConfig.findOne({ where: { key: 'academy_name' } });
+      await sendActivationEmail({
         to: student.email,
-        subject: 'Activa tu cuenta',
-        html: `<p>Hola ${student.firstName},</p><p>Activa tu cuenta: <a href="${activationUrl}">${activationUrl}</a></p><p>Expira en ${ttlHours} horas.</p>`,
+        firstName: student.firstName,
+        activationUrl,
+        ttlHours,
+        academyName: academyCfg?.value || 'Academia',
       });
       res.json({ message: 'Activation email sent' });
     } catch (err) {
