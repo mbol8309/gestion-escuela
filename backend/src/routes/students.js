@@ -151,9 +151,11 @@ router.post('/:id/send-activation', auth, requireRole('admin', 'gestor'), async 
     await t.commit();
 
     try {
-      const [academyCfg, baseUrlCfg] = await Promise.all([
+      const [academyCfg, baseUrlCfg, fromNameCfg, fromAddrCfg] = await Promise.all([
         AppConfig.findOne({ where: { key: 'academy_name' } }),
         AppConfig.findOne({ where: { key: 'base_url' } }),
+        AppConfig.findOne({ where: { key: 'email_from_name' } }),
+        AppConfig.findOne({ where: { key: 'email_from_address' } }),
       ]);
       const baseUrl = baseUrlCfg?.value || process.env.FRONTEND_URL;
       const activationUrlFinal = `${baseUrl}/activate/${token}`;
@@ -163,6 +165,8 @@ router.post('/:id/send-activation', auth, requireRole('admin', 'gestor'), async 
         activationUrl: activationUrlFinal,
         ttlHours,
         academyName: academyCfg?.value || 'Academia',
+        fromName: fromNameCfg?.value || academyCfg?.value || 'Academia',
+        fromAddress: fromAddrCfg?.value || 'noreply@miguesync.es',
       });
       res.json({ message: 'Activation email sent' });
     } catch (err) {

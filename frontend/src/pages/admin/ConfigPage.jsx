@@ -95,6 +95,31 @@ export default function ConfigPage() {
             <p className="text-xs text-gray-400 mt-1">Dirección de email que aparece como remitente en los envíos</p>
           </div>
 
+          <div className="border-t pt-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Configuración de email</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nombre del remitente</label>
+                <input
+                  {...register('email_from_name')}
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  placeholder="Mi Academia"
+                />
+                <p className="text-xs text-gray-400 mt-1">Nombre que verá el destinatario en el email (ej: "Academia de Estética")</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Dirección de envío</label>
+                <input
+                  {...register('email_from_address')}
+                  type="email"
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  placeholder="noreply@miguesync.es"
+                />
+                <p className="text-xs text-gray-400 mt-1">Dirección desde la que se envían los emails (debe estar verificada en Resend)</p>
+              </div>
+            </div>
+          </div>
+
           {mutation.isSuccess && (
             <p className="text-green-600 text-sm bg-green-50 px-3 py-2 rounded-lg">✅ Configuración guardada</p>
           )}

@@ -2,9 +2,10 @@ const { Resend } = require('resend');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-async function sendActivationEmail({ to, firstName, activationUrl, ttlHours, academyName }) {
+async function sendActivationEmail({ to, firstName, activationUrl, ttlHours, academyName, fromName, fromAddress }) {
+  const from = `${fromName || academyName || 'Academia'} <${fromAddress || 'noreply@miguesync.es'}>`;
   return resend.emails.send({
-    from: `${academyName || 'Academia'} <noreply@miguesync.es>`,
+    from,
     to,
     subject: 'Completa tu inscripción',
     html: `
@@ -24,9 +25,10 @@ async function sendActivationEmail({ to, firstName, activationUrl, ttlHours, aca
   });
 }
 
-async function sendDiplomaEmail({ to, firstName, academyName, courseName, pdfBuffer, fileName }) {
+async function sendDiplomaEmail({ to, firstName, academyName, fromName, fromAddress, courseName, pdfBuffer, fileName }) {
+  const from = `${fromName || academyName || 'Academia'} <${fromAddress || 'noreply@miguesync.es'}>`;
   return resend.emails.send({
-    from: `${academyName || 'Academia'} <noreply@miguesync.es>`,
+    from,
     to,
     subject: `Tu diploma — ${courseName}`,
     html: `
