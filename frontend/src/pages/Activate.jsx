@@ -9,6 +9,7 @@ import api from '../services/api';
 const schema = z.object({
   firstName: z.string().min(1, 'Requerido'),
   lastName: z.string().min(1, 'Requerido'),
+  dni: z.string().min(1, 'Requerido'),
   phone: z.string().optional(),
   address: z.string().optional(),
   birthDate: z.string().optional(),
@@ -63,6 +64,7 @@ export default function Activate() {
         reset({
           firstName: r.data.firstName || '',
           lastName: r.data.lastName || '',
+          dni: r.data.dni || '',
           phone: r.data.phone || '',
           address: r.data.address || '',
           birthDate: r.data.birthDate ? r.data.birthDate.substring(0, 10) : '',
@@ -153,6 +155,11 @@ export default function Activate() {
               <input {...register('lastName')} className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName.message}</p>}
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">DNI/NIE *</label>
+            <input {...register('dni')} className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+            {errors.dni && <p className="text-red-500 text-xs mt-1">{errors.dni.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Teléfono</label>
