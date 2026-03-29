@@ -41,6 +41,11 @@ router.post('/', auth, async (req, res) => {
     if (!studentId || !courseId) {
       return res.status(400).json({ error: 'studentId y courseId son requeridos' });
     }
+    // Validar duplicado
+    const existing = await Enrollment.findOne({ where: { studentId, courseId } });
+    if (existing) {
+      return res.status(409).json({ error: 'El alumno ya está inscrito en este curso' });
+    }
     const enrollment = await Enrollment.create({
       studentId,
       courseId,
@@ -82,6 +87,19 @@ router.put('/:id/finish', auth, requireRole('admin', 'gestor'), async (req, res)
     });
     res.json(enrollment);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+router.delete('/:id', auth, requireRole('admin', 'gestor'), async (req, res) => {
+  try {
+    const enrollment = await Enrollment.findByPk(req.params.id);
+    if (!enrollment) return res.status(404).json({ error: 'Not found' });
+    await enrollment.destroy(); // soft delete
+    res.json({ message: 'Enrollment removed' });
+  } catch (err) {
+    console.error('[DELETE /enrollments/' + req.params.id + ']', err.message);
     res.status(500).json({ error: err.message });
   }
 });

@@ -194,6 +194,15 @@ export default function StudentDetail() {
     onError: (err) => toast(err.response?.data?.error || 'Error al terminar curso', 'error'),
   });
 
+  const removeEnrollmentMutation = useMutation({
+    mutationFn: (enrollmentId) => api.delete(`/enrollments/${enrollmentId}`),
+    onSuccess: () => {
+      toast('Inscripción eliminada');
+      queryClient.invalidateQueries({ queryKey: ['student', id] });
+    },
+    onError: (err) => toast(err.response?.data?.error || 'Error al eliminar', 'error'),
+  });
+
   const sendActivationMutation = useMutation({
     mutationFn: () => api.post(`/students/${id}/send-activation`),
     onSuccess: () => {
@@ -293,7 +302,7 @@ export default function StudentDetail() {
               {student.phone && <p>Tel: {student.phone}</p>}
             </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={openEdit}
               className="flex items-center gap-2 border rounded-lg px-4 py-2 text-sm hover:bg-gray-50"
@@ -383,6 +392,16 @@ export default function StudentDetail() {
                               className="text-xs border border-green-300 text-green-600 rounded px-2 py-1 hover:bg-green-50"
                             >
                               📄 Diploma
+                            </button>
+                          )}
+                          {(enr.status === 'pending' || enr.status === 'draft') && (
+                            <button
+                              onClick={() => {
+                                if (confirm('¿Eliminar esta inscripción?')) removeEnrollmentMutation.mutate(enr.id);
+                              }}
+                              className="text-xs border border-red-200 text-red-500 rounded px-2 py-1 hover:bg-red-50"
+                            >
+                              🗑️ Quitar
                             </button>
                           )}
                         </div>
