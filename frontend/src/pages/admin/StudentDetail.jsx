@@ -1,15 +1,20 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { useState } from 'react';
 import api from '../../services/api';
-import { ArrowLeft, Pencil, X } from 'lucide-react';
+import { ArrowLeft, Pencil, X, Download } from 'lucide-react';
 
 function StatusBadge({ status }) {
   const map = {
+    enrolled: { label: 'Matriculado', cls: 'bg-green-100 text-green-700' },
+    pending: { label: 'Pendiente', cls: 'bg-yellow-100 text-yellow-700' },
+    finished: { label: 'Finalizado', cls: 'bg-blue-100 text-blue-700' },
+    rejected: { label: 'Rechazado', cls: 'bg-red-100 text-red-700' },
+    // legacy
     completed: { label: 'Completado', cls: 'bg-green-100 text-green-700' },
     active: { label: 'En curso', cls: 'bg-yellow-100 text-yellow-700' },
-    rejected: { label: 'Rechazado', cls: 'bg-red-100 text-red-700' },
+    approved: { label: 'Aprobado', cls: 'bg-green-100 text-green-700' },
   };
   const s = map[status] || { label: status, cls: 'bg-gray-100 text-gray-600' };
   return <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>;
@@ -18,7 +23,7 @@ function StatusBadge({ status }) {
 function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold">{title}</h2>
           <button onClick={onClose}><X size={20} /></button>
@@ -29,12 +34,53 @@ function Modal({ title, onClose, children }) {
   );
 }
 
+function DiplomaModal({ enrollment, onClose }) {
+  const courseId = enrollment.courseId || enrollment.CourseEdition?.courseId || enrollment.Course?.id;
+  const { data: templates = [], isLoading } = useQuery({
+    queryKey: ['templates', courseId],
+    queryFn: () => courseId ? api.get(`/courses/${courseId}/templates`).then((r) => r.data) : [],
+    enabled: !!courseId,
+  });
+
+  const downloadDiploma = (templateId) => {
+    const url = `/api/templates/${templateId}/generate/${enrollment.id}`;
+    window.open(url, '_blank');
+  };
+
+  return (
+    <Modal title="Generar diploma" onClose={onClose}>
+      {isLoading ? (
+        <p className="text-gray-400 text-sm text-center py-4">Cargando plantillas...</p>
+      ) : templates.filter((t) => t.type === 'diploma').length === 0 ? (
+        <p className="text-gray-400 text-sm text-center py-6">
+          No hay plantillas de diploma para este curso.<br />
+          Puedes añadir una desde el detalle del curso.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {templates.filter((t) => t.type === 'diploma').map((t) => (
+            <button
+              key={t.id}
+              onClick={() => downloadDiploma(t.id)}
+              className="w-full flex items-center gap-3 border rounded-lg px-4 py-3 hover:bg-indigo-50 hover:border-indigo-300 text-left"
+            >
+              <Download size={16} className="text-indigo-500 flex-shrink-0" />
+              <span className="text-sm font-medium">{t.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 export default function StudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const [showEdit, setShowEdit] = useState(false);
+  const [diplomaEnrollment, setDiplomaEnrollment] = useState(null);
 
   const prevSearch = location.state?.searchParams || '';
 
@@ -44,6 +90,11 @@ export default function StudentDetail() {
   });
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm();
+
+  const finishMutation = useMutation({
+    mutationFn: (enrollmentId) => api.put(`/enrollments/${enrollmentId}/finish`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['student', id] }),
+  });
 
   const openEdit = () => {
     reset({
@@ -134,22 +185,46 @@ export default function StudentDetail() {
               <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
                 <tr>
                   <th className="text-left px-4 py-3">Curso</th>
-                  <th className="text-left px-4 py-3">Edición/Año</th>
+                  <th className="text-left px-4 py-3 hidden sm:table-cell">Inicio</th>
                   <th className="text-left px-4 py-3">Estado</th>
-                  <th className="text-left px-4 py-3">Fecha</th>
+                  <th className="text-left px-4 py-3">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {enrollments.map((enr) => {
-                  const edition = enr.CourseEdition;
-                  const course = edition?.Course;
+                  const course = enr.Course || enr.CourseEdition?.Course;
+                  const courseName = course?.name || enr.CourseEdition?.year || '—';
                   return (
                     <tr key={enr.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{course?.name || '—'}</td>
-                      <td className="px-4 py-3 text-gray-500">{edition?.year || edition?.name || '—'}</td>
+                      <td className="px-4 py-3 font-medium">{courseName}</td>
+                      <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
+                        {enr.startDate ? new Date(enr.startDate).toLocaleDateString('es-ES') : '—'}
+                      </td>
                       <td className="px-4 py-3"><StatusBadge status={enr.status} /></td>
-                      <td className="px-4 py-3 text-gray-500">
-                        {enr.createdAt ? new Date(enr.createdAt).toLocaleDateString('es-ES') : '—'}
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 flex-wrap">
+                          {enr.status === 'enrolled' && (
+                            <button
+                              onClick={() => {
+                                if (confirm('¿Marcar este curso como terminado?')) {
+                                  finishMutation.mutate(enr.id);
+                                }
+                              }}
+                              disabled={finishMutation.isPending}
+                              className="text-xs border border-blue-300 text-blue-600 rounded px-2 py-1 hover:bg-blue-50 disabled:opacity-50"
+                            >
+                              🎓 Terminar
+                            </button>
+                          )}
+                          {enr.status === 'finished' && (
+                            <button
+                              onClick={() => setDiplomaEnrollment(enr)}
+                              className="text-xs border border-green-300 text-green-600 rounded px-2 py-1 hover:bg-green-50"
+                            >
+                              📄 Diploma
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -160,6 +235,7 @@ export default function StudentDetail() {
         )}
       </div>
 
+      {/* Edit modal */}
       {showEdit && (
         <Modal title="Editar alumno" onClose={() => setShowEdit(false)}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -196,6 +272,11 @@ export default function StudentDetail() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Diploma modal */}
+      {diplomaEnrollment && (
+        <DiplomaModal enrollment={diplomaEnrollment} onClose={() => setDiplomaEnrollment(null)} />
       )}
     </div>
   );

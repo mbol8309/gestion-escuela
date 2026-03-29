@@ -9,6 +9,8 @@ import Students from '../pages/admin/Students';
 import Enrollments from '../pages/admin/Enrollments';
 import StudentDetail from '../pages/admin/StudentDetail';
 import CourseDetail from '../pages/admin/CourseDetail';
+import ConfigPage from '../pages/admin/ConfigPage';
+import TemplateEditor from '../pages/admin/TemplateEditor';
 import MyCourses from '../pages/portal/MyCourses';
 import Profile from '../pages/portal/Profile';
 import AdminLayout from '../components/AdminLayout';
@@ -36,7 +38,9 @@ export default function AppRouter() {
           <Route path="alumnos" element={<Students />} />
           <Route path="alumnos/:id" element={<StudentDetail />} />
           <Route path="cursos/:id" element={<CourseDetail />} />
+          <Route path="cursos/:id/plantillas/:templateId" element={<TemplateEditor />} />
           <Route path="inscripciones" element={<Enrollments />} />
+          <Route path="configuracion" element={<ConfigPage />} />
         </Route>
 
         <Route path="/portal" element={<RequireAuth roles={['alumno']}><PortalLayout /></RequireAuth>}>

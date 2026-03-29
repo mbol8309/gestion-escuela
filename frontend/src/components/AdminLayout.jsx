@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { LayoutDashboard, BookOpen, Users, ClipboardList, LogOut, Menu, X, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, ClipboardList, LogOut, Menu, X, ChevronLeft, Settings } from 'lucide-react';
 
 export default function AdminLayout() {
   const { user, logout } = useAuthStore();
@@ -16,6 +16,7 @@ export default function AdminLayout() {
     { to: '/admin/cursos', icon: BookOpen, label: 'Cursos' },
     { to: '/admin/alumnos', icon: Users, label: 'Alumnos' },
     { to: '/admin/inscripciones', icon: ClipboardList, label: 'Inscripciones' },
+    { to: '/admin/configuracion', icon: Settings, label: 'Configuración' },
   ];
 
   const SidebarContent = () => (

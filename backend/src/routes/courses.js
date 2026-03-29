@@ -1,7 +1,8 @@
 const router = require('express').Router();
-const { Course, CourseEdition, Enrollment } = require('../models');
+const { Course, CourseEdition, Enrollment, DiplomaTemplate } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
+const { uploadTemplate, listTemplates } = require('../controllers/templateController');
 
 router.get('/', auth, async (req, res) => {
   const { search, active } = req.query;
@@ -45,5 +46,9 @@ router.delete('/:id', auth, requireRole('admin'), async (req, res) => {
   await course.destroy();
   res.json({ message: 'Deleted' });
 });
+
+// Templates
+router.post('/:id/templates', auth, requireRole('admin', 'gestor'), ...uploadTemplate);
+router.get('/:id/templates', auth, listTemplates);
 
 module.exports = router;

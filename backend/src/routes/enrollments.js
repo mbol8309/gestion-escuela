@@ -1,32 +1,43 @@
 const router = require('express').Router();
 const { Enrollment, Student, CourseEdition, Course } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
+const { Op } = require('sequelize');
 
 router.get('/', auth, async (req, res) => {
-  const { status, editionId } = req.query;
-  const where = {};
-  if (status) where.status = status;
-  if (editionId) where.editionId = editionId;
+  try {
+    const { status, editionId, courseId, startDateFrom, startDateTo } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    if (editionId) where.editionId = editionId;
+    if (courseId) where.courseId = courseId;
+    if (startDateFrom || startDateTo) {
+      where.startDate = {};
+      if (startDateFrom) where.startDate[Op.gte] = new Date(startDateFrom);
+      if (startDateTo) where.startDate[Op.lte] = new Date(startDateTo);
+    }
 
-  // Alumnos solo ven sus inscripciones
-  if (req.user.role === 'alumno') {
-    const { Student: S } = require('../models');
-    const student = await S.findOne({ where: { userId: req.user.id } });
-    if (student) where.studentId = student.id;
+    if (req.user.role === 'alumno') {
+      const student = await Student.findOne({ where: { userId: req.user.id } });
+      if (student) where.studentId = student.id;
+    }
+
+    const enrollments = await Enrollment.findAll({
+      where,
+      include: [
+        { model: Student, attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Course, attributes: ['id', 'name'] },
+        {
+          model: CourseEdition,
+          required: false,
+          include: [{ model: Course, attributes: ['id', 'name'] }],
+        },
+      ],
+      order: [['requestedAt', 'DESC']],
+    });
+    res.json(enrollments);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const enrollments = await Enrollment.findAll({
-    where,
-    include: [
-      { model: Student, attributes: ['id', 'firstName', 'lastName', 'email'] },
-      {
-        model: CourseEdition,
-        include: [{ model: Course, attributes: ['id', 'name'] }],
-      },
-    ],
-    order: [['requestedAt', 'DESC']],
-  });
-  res.json(enrollments);
 });
 
 router.post('/', auth, async (req, res) => {
@@ -39,16 +50,33 @@ router.post('/', auth, async (req, res) => {
 });
 
 router.put('/:id/status', auth, requireRole('admin', 'gestor'), async (req, res) => {
-  const enrollment = await Enrollment.findByPk(req.params.id);
-  if (!enrollment) return res.status(404).json({ error: 'Not found' });
-  const { status, notes } = req.body;
-  await enrollment.update({
-    status,
-    notes,
-    resolvedAt: new Date(),
-    resolvedBy: req.user.id,
-  });
-  res.json(enrollment);
+  try {
+    const enrollment = await Enrollment.findByPk(req.params.id);
+    if (!enrollment) return res.status(404).json({ error: 'Not found' });
+    const { status, notes } = req.body;
+    await enrollment.update({ status, notes, resolvedAt: new Date(), resolvedBy: req.user.id });
+    res.json(enrollment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/:id/finish', auth, requireRole('admin', 'gestor'), async (req, res) => {
+  try {
+    const enrollment = await Enrollment.findByPk(req.params.id);
+    if (!enrollment) return res.status(404).json({ error: 'Not found' });
+    if (enrollment.status === 'finished') {
+      return res.status(400).json({ error: 'Ya está marcado como terminado' });
+    }
+    await enrollment.update({
+      status: 'finished',
+      finishedAt: new Date(),
+      finishedBy: req.user.id,
+    });
+    res.json(enrollment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
