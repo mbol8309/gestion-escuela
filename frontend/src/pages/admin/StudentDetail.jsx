@@ -37,7 +37,7 @@ function Modal({ title, onClose, children }) {
 }
 
 function DiplomaModal({ enrollment, onClose }) {
-  const courseId = enrollment.courseId || enrollment.CourseEdition?.courseId || enrollment.Course?.id;
+  const courseId = enrollment.courseId || enrollment.Course?.id;
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['templates', courseId],
     queryFn: () => courseId ? api.get(`/courses/${courseId}/templates`).then((r) => r.data) : [],
@@ -362,8 +362,7 @@ export default function StudentDetail() {
               </thead>
               <tbody className="divide-y">
                 {enrollments.map((enr) => {
-                  const course = enr.Course || enr.CourseEdition?.Course;
-                  const courseName = course?.name || enr.CourseEdition?.year || '—';
+                  const courseName = enr.Course?.name || '—';
                   return (
                     <tr key={enr.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{courseName}</td>

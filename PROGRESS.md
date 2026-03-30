@@ -2,7 +2,7 @@
 
 ## Fase 1 — Base [✅ COMPLETA - v1.0.0]
 - [x] Estructura backend (Express + Sequelize + SQLite)
-- [x] Modelos: User, Student, Course, CourseEdition, Enrollment, DiplomaTemplate, Diploma
+- [x] Modelos: User, Student, Course, Enrollment, DiplomaTemplate, Diploma, AppConfig
 - [x] Auth: login, JWT middleware, roles
 - [x] Seed: usuario admin@admin.com / admin
 - [x] CRUD Cursos, Ediciones, Alumnos, Inscripciones
@@ -22,10 +22,8 @@
 ## Fase 2 — Rediseño lógica de cursos [EN PROGRESO]
 
 ### Backend
-- [ ] Migración BD: eliminar CourseEditions, rediseñar Enrollment, crear AppConfig
 - [ ] Modelo Enrollment v2: courseId directo, startDate, endDate, finishedAt, finishedBy, status nuevo
 - [ ] Modelo AppConfig
-- [ ] Migrar datos existentes (CourseEdition → Enrollment directo)
 - [ ] Ruta PUT /api/enrollments/:id/finish
 - [ ] Ruta GET/PUT /api/config
 - [ ] Ruta POST /api/students con asignación de cursos en el mismo paso

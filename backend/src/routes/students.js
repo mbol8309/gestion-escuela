@@ -42,9 +42,9 @@ router.get('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
         if (startDateTo) enrollmentWhere.startDate[Op.lte] = new Date(startDateTo);
       }
       options.include = [{ model: Enrollment, where: enrollmentWhere, required: true, include: [Course] }];
-    } else {
-      options.include = [{ model: Enrollment, required: false, include: [Course] }];
     }
+    // Sin filtros de enrollment, NO incluir enrollments en la lista (muy lento con 10k+ registros)
+    // Los enrollments se cargan solo en GET /api/students/:id
 
     const { count, rows } = await Student.findAndCountAll(options);
     res.json({ total: count, page: parseInt(page), data: rows });

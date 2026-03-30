@@ -1,7 +1,5 @@
 # SCHEMA.md — Modelo de datos v2.0
 
-## Cambios respecto a v1.0
-- **Eliminado:** `CourseEdition` — los cursos son fluidos, sin divisiones por año
 - **Modificado:** `Enrollment` — es la relación central alumno↔curso, con fechas propias y estados
 - **Modificado:** `Student` — añade campo `status`
 - **Modificado:** `DiplomaTemplate` — añade `type` para distinguir ficha de inscripción vs diploma

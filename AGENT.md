@@ -50,7 +50,6 @@ Ver SCHEMA.md para detalle completo.
 - **User** — autenticación, roles: admin | gestor | alumno
 - **Student** — datos personales, token activación, vinculado a User cuando se activa
 - **Course** — nombre, descripción, logo
-- **CourseEdition** — año/fechas de una edición del curso
 - **Enrollment** — alumno ↔ edición, estados: pending | approved | rejected
 - **DiplomaTemplate** — plantilla PDF con campos configurables por curso
 - **Diploma** — diploma generado para un alumno en una edición

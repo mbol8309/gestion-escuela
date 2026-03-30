@@ -51,7 +51,7 @@ export default function Enrollments() {
                 <span className="text-gray-400 font-normal ml-2 text-sm">— {e.Student?.email}</span>
               </p>
               <p className="text-sm text-gray-500 mt-0.5">
-                {e.CourseEdition?.Course?.name} · Edición {e.CourseEdition?.year}
+                {e.Course?.name || '—'}
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 Solicitada: {new Date(e.requestedAt).toLocaleDateString('es-ES')}

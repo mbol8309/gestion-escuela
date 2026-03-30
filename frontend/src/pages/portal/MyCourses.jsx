@@ -41,8 +41,8 @@ export default function MyCourses() {
                   {e.status}
                 </span>
               </div>
-              <h3 className="font-semibold text-gray-800">{e.CourseEdition?.Course?.name}</h3>
-              <p className="text-sm text-gray-500 mt-1">Edición {e.CourseEdition?.year}</p>
+              <h3 className="font-semibold text-gray-800">{e.Course?.name || '—'}</h3>
+              
               <p className="text-xs text-gray-400 mt-3">
                 Inscrito el {new Date(e.requestedAt).toLocaleDateString('es-ES')}
               </p>

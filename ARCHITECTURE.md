@@ -151,4 +151,4 @@ idx_students_userId
 ## Versiones
 - `v1.0.0` — Fase 1 completa: CRUD básico, auth, migración Excel
 - `v1.1.x` — Flujo de activación, Resend email, soft delete, filtros URL, React Query
-- `v1.2.x` — Fix CourseEdition, índices BD, paginación, filtros alumnos
+- `v1.2.x` — índices BD, paginación, filtros alumnos
