@@ -76,6 +76,13 @@ gestion-escuela/
 - **main** — producción (despliega en miguesync.es — pendiente)
 - **dev** — desarrollo (despliega automáticamente en raspberrypi.lan)
 
+## Regla obligatoria — Git
+**Todo cambio debe hacer push al repo inmediatamente.**
+No dejar cambios sin pushear. Siempre:
+```bash
+git add -A && git commit -m "descripción" && git push origin main && git push origin dev
+```
+
 ## Comandos útiles
 ```bash
 cd backend && npm run dev      # dev con nodemon (puerto 3001 local, 3002 en Pi)
