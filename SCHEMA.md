@@ -1,134 +1,138 @@
-# SCHEMA.md — Modelo de datos v2.0
+# SCHEMA.md — Modelo de datos
 
-- **Modificado:** `Enrollment` — es la relación central alumno↔curso, con fechas propias y estados
-- **Modificado:** `Student` — añade campo `status`
-- **Modificado:** `DiplomaTemplate` — añade `type` para distinguir ficha de inscripción vs diploma
-- **Nuevo:** `AppConfig` — configuración global del sistema
+## Entidades
 
----
-
-## User
+### User
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | id | UUID | PK |
 | email | STRING | unique |
 | passwordHash | STRING | bcrypt |
-| role | ENUM | admin, gestor, alumno |
-| studentId | FK | null si no es alumno |
+| role | STRING | admin \| gestor \| alumno |
+| studentId | UUID FK | null si no es alumno |
 | active | BOOLEAN | |
-| timestamps | | |
 
-## Student
+### Student
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | id | UUID | PK |
-| firstName | STRING | |
-| lastName | STRING | |
-| dni | STRING | |
-| email | STRING | |
+| firstName | STRING | obligatorio |
+| lastName | STRING | obligatorio |
+| email | STRING | unique, obligatorio |
+| dni | STRING | nullable — lo rellena el alumno al activar |
 | phone | STRING | nullable |
 | address | STRING | nullable |
 | birthDate | DATE | nullable |
-| status | ENUM | pending, enrolled, active |
+| status | STRING | ver estados abajo |
 | activationToken | STRING | nullable |
 | activationTokenExpiry | DATE | nullable |
-| userId | FK | null hasta activación |
-| timestamps | | |
+| userId | UUID FK | null hasta que el alumno activa su cuenta |
+| deletedAt | DATE | soft delete (paranoid) |
 
-## Course
+**Estados de Student.status:**
+- `draft` — creado por gestor, sin cursos asignados todavía
+- `pending` — email de activación enviado, alumno pendiente de completar datos
+- `enrolled` — alumno completó sus datos y confirmó inscripción
+- `active` — activo (uso futuro)
+
+### Course
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | id | UUID | PK |
 | name | STRING | |
-| description | TEXT | |
-| logo | STRING | path |
-| createdBy | FK User | |
-| active | BOOLEAN | |
-| timestamps | | |
+| description | TEXT | nullable |
+| logo | STRING | path al archivo, nullable |
+| createdBy | UUID FK | User gestor |
 
-## Enrollment (relación alumno ↔ curso — entidad central)
+### Enrollment (relación alumno ↔ curso — entidad central)
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | id | UUID | PK |
-| studentId | FK Student | |
-| courseId | FK Course | directo, sin edición intermedia |
-| status | ENUM | pending, enrolled, finished, rejected |
-| startDate | DATE | fecha inicio, la pone el gestor |
-| endDate | DATE | fecha fin prevista, opcional |
-| finishedAt | DATE | cuando gestor marca como terminado |
-| finishedBy | FK User | gestor que cerró el curso |
-| enrollmentFormSentAt | DATE | cuando se envió ficha para firmar |
-| resolvedBy | FK User | gestor que aprobó/rechazó |
+| studentId | UUID FK | Student |
+| courseId | UUID FK | Course — directo, sin intermediarios |
+| status | STRING | ver estados abajo |
+| startDate | DATE | fecha inicio — la pone el gestor al asignar |
+| endDate | DATE | fecha fin prevista, nullable |
+| finishedAt | DATE | cuando gestor termina el curso para este alumno |
+| finishedBy | UUID FK | User gestor que terminó el curso |
+| enrollmentFormSentAt | DATE | cuando se envió la ficha de inscripción |
 | notes | TEXT | nullable |
-| timestamps | | |
+| deletedAt | DATE | soft delete (paranoid) |
 
-## DiplomaTemplate
+**Estados de Enrollment.status:**
+- `pending` — gestor asignó el curso, alumno no ha confirmado todavía
+- `enrolled` — alumno confirmó su inscripción (activó su cuenta)
+- `finished` — gestor marcó el curso como terminado para este alumno
+- `rejected` — rechazado (uso manual por gestor)
+
+### DiplomaTemplate
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | id | UUID | PK |
-| courseId | FK Course | nullable si type=enrollment_form (es global) |
-| name | STRING | "Diploma de Asistencia", "Título Oficial"... |
-| type | ENUM | enrollment_form, diploma |
-| pdfPath | STRING | path a la plantilla base |
-| fields | JSON | [{field, x, y, fontSize, fontFamily, color}] |
-| timestamps | | |
+| courseId | UUID FK | Course al que pertenece |
+| name | STRING | ej: "Diploma de Asistencia", "Título Oficial" |
+| type | STRING | enrollment_form \| diploma |
+| pdfPath | STRING | path a la plantilla PDF base |
+| fields | JSON | [{field, x, y, fontSize, color}] |
 
-**Campos disponibles para plantillas:**
-- `firstName`, `lastName`, `fullName`
-- `dni`, `email`, `phone`, `address`, `birthDate`
-- `courseName`, `startDate`, `endDate`, `finishedAt`
-- `academyName` (de AppConfig)
+**Campos disponibles en plantillas:**
+`firstName`, `lastName`, `fullName`, `dni`, `email`, `phone`, `courseName`, `startDate`, `endDate`, `finishedAt`, `academyName`
 
-## Diploma (PDF generado para un alumno)
+### Diploma (PDF generado)
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | id | UUID | PK |
-| enrollmentId | FK Enrollment | |
-| templateId | FK DiplomaTemplate | |
-| pdfPath | STRING | path PDF generado |
+| enrollmentId | UUID FK | Enrollment |
+| templateId | UUID FK | DiplomaTemplate |
+| pdfPath | STRING | path al PDF generado |
 | sentAt | DATE | nullable |
-| registrationNumber | STRING | Nº correlativo |
-| timestamps | | |
+| registrationNumber | STRING | número correlativo |
 
-## AppConfig (configuración global)
+### AppConfig (configuración global clave-valor)
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | id | INTEGER | PK autoincrement |
 | key | STRING | unique |
 | value | TEXT | |
-| description | STRING | texto para mostrar en UI |
-| timestamps | | |
+| description | STRING | texto descriptivo para la UI |
 
 **Claves predefinidas:**
-- `activation_token_ttl_hours` — TTL token activación (default: 48)
-- `academy_name` — Nombre de la academia
-- `smtp_from` — Email remitente
-- `enrollment_form_template_id` — ID de la plantilla global de ficha de inscripción
+- `activation_token_ttl_hours` — horas de validez del token (default: 48)
+- `academy_name` — nombre de la academia (aparece en PDFs)
+- `base_url` — URL base para links en emails (ej: http://100.117.252.96)
+- `email_from_name` — nombre del remitente de emails
+- `email_from_address` — dirección del remitente (debe estar verificada en Resend)
+
+---
+
+## Diagrama de relaciones
+```
+User (admin | gestor | alumno)
+  └── Student (1:1 via studentId)
+        └── Enrollment ←→ Course
+              ├── DiplomaTemplate (N por curso)
+              └── Diploma (generado por enrollment + template)
+
+AppConfig (tabla independiente, clave-valor)
+```
 
 ---
 
 ## Flujo completo
 
-### 1. Gestor crea alumno
-- Datos mínimos: nombre, apellidos, email, DNI
-- Asigna cursos con startDate (endDate opcional)
-- Se crean Enrollments con status: 'pending'
+### 1. Crear e inscribir alumno
+1. Gestor crea Student (nombre + email mínimo) → `draft`
+2. Gestor asigna curso(s) desde StudentDetail → Enrollment(s) `pending` con startDate
+3. Gestor pulsa "Enviar activación" → email Resend con token
+4. Alumno abre link → rellena DNI, teléfono, dirección, fecha nac., contraseña
+5. Alumno confirma → Student: `enrolled`, Enrollments: `enrolled`, User creado
 
-### 2. Email de activación
-- Gestor pulsa "Enviar email" en perfil del alumno
-- Alumno recibe link con JWT token (TTL de AppConfig)
-- Alumno completa datos y pulsa "Confirmar inscripción"
-- Todos sus Enrollments → status: 'enrolled'
-- Se crea su User con rol alumno
+### 2. Terminar curso y diploma
+1. Gestor entra a StudentDetail del alumno
+2. Localiza el Enrollment `enrolled` del curso
+3. Pulsa "Terminar" → Enrollment: `finished`, se registra finishedAt + finishedBy
+4. Gestor genera PDF desde las plantillas del curso → descarga o envía por email
 
-### 3. Ficha de inscripción
-- Cuando alumno está enrolled, gestor genera PDF con plantilla global (enrollment_form)
-- Se puede imprimir para firma física
-
-### 4. Finalización
-- Gestor entra al perfil del alumno
-- Pulsa "Terminar curso" → Enrollment.status = 'finished', se guarda finishedAt + finishedBy
-
-### 5. Diploma
-- Para cada Enrollment finished, gestor genera PDFs de plantillas tipo 'diploma' del curso
-- Puede enviar por email o descargar para imprimir
+### 3. Sin flujo de solicitud de inscripción
+**El alumno NO solicita inscripción.** El gestor asigna los cursos directamente.
+No existe flujo de aprobación/rechazo de solicitudes por parte del alumno.
