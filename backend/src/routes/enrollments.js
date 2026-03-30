@@ -5,7 +5,9 @@ const { Op } = require('sequelize');
 
 router.get('/', auth, async (req, res) => {
   try {
-    const { status, courseId, startDateFrom, startDateTo } = req.query;
+    const { status, courseId, startDateFrom, startDateTo, page = 1, limit = 10 } = req.query;
+    const limitN = Math.min(100, Math.max(1, parseInt(limit)));
+    const offset = (Math.max(1, parseInt(page)) - 1) * limitN;
     const where = {};
     if (status) where.status = status;
     if (courseId) where.courseId = courseId;
@@ -20,16 +22,17 @@ router.get('/', auth, async (req, res) => {
       if (student) where.studentId = student.id;
     }
 
-    const enrollments = await Enrollment.findAll({
+    const { count, rows } = await Enrollment.findAndCountAll({
       where,
       include: [
         { model: Student, attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Course, attributes: ['id', 'name'] },
-
       ],
-      order: [['requestedAt', 'DESC']],
+      order: [['createdAt', 'DESC']],
+      limit: limitN,
+      offset,
     });
-    res.json(enrollments);
+    res.json({ total: count, page: parseInt(page), limit: limitN, data: rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -58,18 +61,6 @@ router.post('/', auth, async (req, res) => {
   } catch (err) {
     console.error('[POST /enrollments]', err.message);
     res.status(400).json({ error: err.message });
-  }
-});
-
-router.put('/:id/status', auth, requireRole('admin', 'gestor'), async (req, res) => {
-  try {
-    const enrollment = await Enrollment.findByPk(req.params.id);
-    if (!enrollment) return res.status(404).json({ error: 'Not found' });
-    const { status, notes } = req.body;
-    await enrollment.update({ status, notes, resolvedAt: new Date(), resolvedBy: req.user.id });
-    res.json(enrollment);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
 });
 

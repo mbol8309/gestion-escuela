@@ -47,7 +47,7 @@ router.get('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
     // Los enrollments se cargan solo en GET /api/students/:id
 
     const { count, rows } = await Student.findAndCountAll(options);
-    res.json({ total: count, page: parseInt(page), data: rows });
+    res.json({ total: count, page: parseInt(page), limit: parseInt(limit), data: rows });
   } catch (err) {
     console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
     res.status(500).json({ error: err.message });
@@ -90,16 +90,22 @@ router.post('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
 
 router.get('/:id', auth, async (req, res) => {
   try {
-    const student = await Student.findByPk(req.params.id, {
-      include: [{
-        model: Enrollment,
-        include: [
-          Course,
-        ],
-      }],
-    });
+    const { enrollPage = 1, enrollLimit = 20 } = req.query;
+    const limitN = Math.min(100, Math.max(1, parseInt(enrollLimit)));
+    const offset = (Math.max(1, parseInt(enrollPage)) - 1) * limitN;
+
+    const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json({ error: 'Not found' });
-    res.json(student);
+
+    const { count, rows: enrollments } = await Enrollment.findAndCountAll({
+      where: { studentId: req.params.id },
+      include: [Course],
+      limit: limitN,
+      offset,
+      order: [['startDate', 'DESC']],
+    });
+
+    res.json({ ...student.toJSON(), Enrollments: enrollments, enrollmentTotal: count, enrollPage: parseInt(enrollPage) });
   } catch (err) {
     console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
     res.status(500).json({ error: err.message });

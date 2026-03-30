@@ -1,11 +1,14 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useDebounce } from 'use-debounce';
 import api from '../../services/api';
 import { useToast } from '../../components/ToastProvider';
 import ResponsiveTable from '../../components/ResponsiveTable';
-import { Plus, Search, ChevronLeft, ChevronRight, X, Pencil, Trash2, Filter } from 'lucide-react';
+import Pagination from '../../components/Pagination';
+import PageSizeSelector from '../../components/PageSizeSelector';
+import { Plus, Search, X, Pencil, Trash2, Filter } from 'lucide-react';
 
 function Modal({ title, onClose, children }) {
   return (
@@ -21,7 +24,7 @@ function Modal({ title, onClose, children }) {
   );
 }
 
-const LIMIT = 20;
+const LIMIT = 10;
 
 export default function Students() {
   const navigate = useNavigate();
@@ -33,11 +36,21 @@ export default function Students() {
   const enrollmentStatus = searchParams.get('enrollmentStatus') || '';
   const startDateFrom = searchParams.get('startDateFrom') || '';
   const startDateTo = searchParams.get('startDateTo') || '';
+  const studentStatus = searchParams.get('studentStatus') || 'enrolled';
   const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || String(LIMIT));
 
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Debounce search input
+  const [searchInput, setSearchInput] = useState(search);
+  const [debouncedSearch] = useDebounce(searchInput, 400);
+  useEffect(() => {
+    setFilter('search', debouncedSearch);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   const {
     register,
@@ -63,18 +76,22 @@ export default function Students() {
     setSearchParams((prev) => { prev.set('page', String(p)); return prev; });
   };
 
+  const setLimit = (l) => {
+    setSearchParams((prev) => { prev.set('limit', String(l)); prev.set('page', '1'); return prev; });
+  };
+
   const { data, isLoading } = useQuery({
-    queryKey: ['students', search, courseId, enrollmentStatus, startDateFrom, startDateTo, page],
+    queryKey: ['students', search, courseId, enrollmentStatus, startDateFrom, startDateTo, studentStatus, page, limit],
     queryFn: () =>
-      api.get('/students', { params: { search, courseId, enrollmentStatus, startDateFrom, startDateTo, page, limit: LIMIT } }).then((r) => r.data),
+      api.get('/students', { params: { search, courseId, enrollmentStatus, startDateFrom, startDateTo, status: studentStatus === 'all' ? undefined : studentStatus, page, limit } }).then((r) => r.data),
+    keepPreviousData: true,
   });
 
-  const { data: courses = [] } = useQuery({
+  const { data: coursesData } = useQuery({
     queryKey: ['courses'],
-    queryFn: () => api.get('/courses').then((r) => r.data),
+    queryFn: () => api.get('/courses', { params: { limit: 100 } }).then((r) => r.data),
   });
-
-  const totalPages = Math.ceil((data?.total ?? 0) / LIMIT);
+  const courses = coursesData?.data || [];
 
   const goToStep2 = async () => {
     const valid = await trigger(['firstName', 'lastName', 'email']);
@@ -151,12 +168,23 @@ export default function Students() {
             <div className="relative flex-1 min-w-[200px]">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
-                value={search}
-                onChange={(e) => setFilter('search', e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Buscar por nombre, email, DNI..."
                 className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
               />
             </div>
+            <select
+              value={studentStatus}
+              onChange={(e) => setFilter('studentStatus', e.target.value)}
+              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <option value="enrolled">Matriculados</option>
+              <option value="draft">Borrador</option>
+              <option value="pending">Pendientes</option>
+              <option value="active">Activos</option>
+              <option value="all">Todos</option>
+            </select>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm ${showFilters || courseId || enrollmentStatus || startDateFrom || startDateTo ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'hover:bg-gray-50'}`}
@@ -246,25 +274,10 @@ export default function Students() {
           onRowClick={(s) => navigate(`/admin/alumnos/${s.id}`, { state: { searchParams: searchParams.toString() } })}
         />
 
-        {totalPages > 1 && (
-          <div className="p-4 border-t flex justify-between items-center">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="flex items-center gap-1 text-sm disabled:opacity-40"
-            >
-              <ChevronLeft size={16} /> Anterior
-            </button>
-            <span className="text-sm text-gray-500">Página {page} de {totalPages}</span>
-            <button
-              onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages}
-              className="flex items-center gap-1 text-sm disabled:opacity-40"
-            >
-              Siguiente <ChevronRight size={16} />
-            </button>
-          </div>
-        )}
+        <div className="flex items-center justify-between px-4 pt-3 pb-1 flex-wrap gap-3">
+          <PageSizeSelector value={limit} onChange={setLimit} />
+          <Pagination page={page} total={data?.total ?? 0} limit={limit} onPage={setPage} />
+        </div>
       </div>
 
       {showModal && (

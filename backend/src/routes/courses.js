@@ -5,11 +5,17 @@ const { Op } = require('sequelize');
 const { uploadTemplate, listTemplates } = require('../controllers/templateController');
 
 router.get('/', auth, async (req, res) => {
-  const { search } = req.query;
-  const where = {};
-  if (search) where.name = { [Op.like]: `%${search}%` };
-  const courses = await Course.findAll({ where, order: [['createdAt', 'DESC']] });
-  res.json(courses);
+  try {
+    const { search, page = 1, limit = 10 } = req.query;
+    const limitN = Math.min(100, Math.max(1, parseInt(limit)));
+    const offset = (Math.max(1, parseInt(page)) - 1) * limitN;
+    const where = {};
+    if (search) where.name = { [Op.like]: `%${search}%` };
+    const { count, rows } = await Course.findAndCountAll({ where, order: [['createdAt', 'DESC']], limit: limitN, offset });
+    res.json({ total: count, page: parseInt(page), limit: limitN, data: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post('/', auth, requireRole('admin', 'gestor'), async (req, res) => {

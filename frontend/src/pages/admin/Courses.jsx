@@ -1,9 +1,12 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useDebounce } from 'use-debounce';
 import api from '../../services/api';
 import ResponsiveTable from '../../components/ResponsiveTable';
+import Pagination from '../../components/Pagination';
+import PageSizeSelector from '../../components/PageSizeSelector';
 import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
 
 function Modal({ title, onClose, children }) {
@@ -25,6 +28,11 @@ export default function Courses() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('search') || '';
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '10');
+
+  const [searchInput, setSearchInput] = useState(search);
+  const [debouncedSearch] = useDebounce(searchInput, 400);
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -33,14 +41,26 @@ export default function Courses() {
   const setFilter = (key, value) => {
     setSearchParams((prev) => {
       if (value) prev.set(key, value); else prev.delete(key);
+      prev.set('page', '1');
       return prev;
     });
   };
 
-  const { data: courses = [], isLoading } = useQuery({
-    queryKey: ['courses', search],
-    queryFn: () => api.get('/courses', { params: { search } }).then((r) => r.data),
+  useEffect(() => {
+    setFilter('search', debouncedSearch);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
+  const setPage = (p) => setSearchParams((prev) => { prev.set('page', String(p)); return prev; });
+  const setLimit = (l) => setSearchParams((prev) => { prev.set('limit', String(l)); prev.set('page', '1'); return prev; });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['courses', search, page, limit],
+    queryFn: () => api.get('/courses', { params: { search, page, limit } }).then((r) => r.data),
+    keepPreviousData: true,
   });
+
+  const courses = data?.data || [];
 
   const openCreate = () => {
     setEditing(null);
@@ -100,8 +120,8 @@ export default function Courses() {
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
-              value={search}
-              onChange={(e) => setFilter('search', e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Buscar cursos..."
               className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
             />
@@ -114,6 +134,10 @@ export default function Courses() {
           loading={isLoading}
           onRowClick={(c) => navigate(`/admin/cursos/${c.id}`)}
         />
+        <div className="flex items-center justify-between px-4 pt-3 pb-1 flex-wrap gap-3">
+          <PageSizeSelector value={limit} onChange={setLimit} />
+          <Pagination page={page} total={data?.total ?? 0} limit={limit} onPage={setPage} />
+        </div>
       </div>
 
       {showModal && (

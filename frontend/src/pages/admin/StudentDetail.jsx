@@ -1,10 +1,11 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { useState } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../components/ToastProvider';
 import { useAuthStore } from '../../store/authStore';
+import Pagination from '../../components/Pagination';
 import { ArrowLeft, Pencil, X, Download, Mail, CheckCircle, Plus, Trash2 } from 'lucide-react';
 
 function StatusBadge({ status }) {
@@ -83,10 +84,11 @@ function AssignCourseModal({ studentId, onClose, onSuccess }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const { data: courses = [], isLoading } = useQuery({
+  const { data: coursesData, isLoading } = useQuery({
     queryKey: ['courses'],
-    queryFn: () => api.get('/courses').then((r) => r.data),
+    queryFn: () => api.get('/courses', { params: { limit: 100 } }).then((r) => r.data),
   });
+  const courses = coursesData?.data || [];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -175,12 +177,15 @@ export default function StudentDetail() {
   const [showEdit, setShowEdit] = useState(false);
   const [diplomaEnrollment, setDiplomaEnrollment] = useState(null);
   const [showAssignCourse, setShowAssignCourse] = useState(false);
+  const [enrollPage, setEnrollPage] = useState(1);
+  const ENROLL_LIMIT = 20;
 
   const prevSearch = location.state?.searchParams || '';
 
   const { data: student, isLoading, error } = useQuery({
-    queryKey: ['student', id],
-    queryFn: () => api.get(`/students/${id}`).then((r) => r.data),
+    queryKey: ['student', id, enrollPage],
+    queryFn: () => api.get(`/students/${id}`, { params: { enrollPage, enrollLimit: ENROLL_LIMIT } }).then((r) => r.data),
+    keepPreviousData: true,
   });
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm();
@@ -189,6 +194,7 @@ export default function StudentDetail() {
     mutationFn: (enrollmentId) => api.put(`/enrollments/${enrollmentId}/finish`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student', id] });
+      setEnrollPage(1);
       toast('Curso marcado como terminado');
     },
     onError: (err) => toast(err.response?.data?.error || 'Error al terminar curso', 'error'),
@@ -199,6 +205,7 @@ export default function StudentDetail() {
     onSuccess: () => {
       toast('Inscripción eliminada');
       queryClient.invalidateQueries({ queryKey: ['student', id] });
+      setEnrollPage(1);
     },
     onError: (err) => toast(err.response?.data?.error || 'Error al eliminar', 'error'),
   });
@@ -279,6 +286,7 @@ export default function StudentDetail() {
   }
 
   const enrollments = student.Enrollments || [];
+  const enrollmentTotal = student.enrollmentTotal ?? enrollments.length;
 
   return (
     <div className="space-y-6">
@@ -412,9 +420,8 @@ export default function StudentDetail() {
             </table>
           </div>
         )}
+        <Pagination page={enrollPage} total={enrollmentTotal} limit={ENROLL_LIMIT} onPage={setEnrollPage} />
       </div>
-
-      {/* Edit modal */}
       {showEdit && (
         <Modal title="Editar alumno" onClose={() => setShowEdit(false)}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

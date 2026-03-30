@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { useToast } from '../../components/ToastProvider';
 import { useAuthStore } from '../../store/authStore';
+import Pagination from '../../components/Pagination';
 import { Plus, Trash2, X, UserCog } from 'lucide-react';
 
 function Modal({ title, onClose, children }) {
@@ -28,11 +29,16 @@ export default function UsersPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
-  const { data: users = [], isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => api.get('/users').then(r => r.data),
+  const [page, setPage] = useState(1);
+  const LIMIT = 10;
+
+  const { data: usersData, isLoading } = useQuery({
+    queryKey: ['users', page],
+    queryFn: () => api.get('/users', { params: { page, limit: LIMIT } }).then(r => r.data),
+    keepPreviousData: true,
   });
 
+  const users = usersData?.data || [];
   const gestores = users.filter(u => u.role === 'gestor');
 
   const handleCreate = async (e) => {
@@ -121,6 +127,7 @@ export default function UsersPage() {
             </table>
           </div>
         )}
+        <Pagination page={page} total={usersData?.total ?? 0} limit={LIMIT} onPage={setPage} />
       </div>
 
       {showModal && (

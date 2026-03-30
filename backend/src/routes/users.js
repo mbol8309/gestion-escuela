@@ -5,8 +5,11 @@ const { auth, requireRole } = require('../middleware/auth');
 
 router.get('/', auth, requireRole('admin'), async (req, res) => {
   try {
-    const users = await User.findAll({ attributes: { exclude: ['passwordHash'] } });
-    res.json(users);
+    const { page = 1, limit = 10 } = req.query;
+    const limitN = Math.min(100, Math.max(1, parseInt(limit)));
+    const offset = (Math.max(1, parseInt(page)) - 1) * limitN;
+    const { count, rows } = await User.findAndCountAll({ attributes: { exclude: ['passwordHash'] }, limit: limitN, offset });
+    res.json({ total: count, page: parseInt(page), limit: limitN, data: rows });
   } catch (err) {
     console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
     res.status(500).json({ error: err.message });
