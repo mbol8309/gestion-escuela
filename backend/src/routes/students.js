@@ -54,6 +54,17 @@ router.get('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
   }
 });
 
+router.get('/me', auth, async (req, res) => {
+  try {
+    const student = await Student.findOne({
+      where: { userId: req.user.id },
+      include: [{ model: Enrollment, include: [Course] }],
+    });
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+    res.json(student);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.post('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
   const t = await sequelize.transaction();
   try {

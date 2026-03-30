@@ -2,6 +2,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const { auth } = require('../middleware/auth');
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -21,6 +22,18 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+router.put('/change-password', auth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findByPk(req.user.id);
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Mínimo 6 caracteres' });
+    await user.update({ passwordHash: await bcrypt.hash(newPassword, 10) });
+    res.json({ message: 'Contraseña actualizada' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = router;
