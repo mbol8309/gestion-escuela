@@ -12,25 +12,21 @@ export default function AdminLayout() {
   const handleLogout = () => { logout(); navigate('/login'); };
 
   const links = [
-    { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-    { to: '/admin/cursos', icon: BookOpen, label: 'Cursos' },
-    { to: '/admin/alumnos', icon: Users, label: 'Alumnos' },
-    { to: '/admin/configuracion', icon: Settings, label: 'Configuración' },
-    ...(user?.role === 'admin' ? [{ to: '/admin/usuarios', icon: UserCog, label: 'Gestores' }] : []),
-  ];
+    { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true, roles: ['admin', 'gestor'] },
+    { to: '/admin/cursos', icon: BookOpen, label: 'Cursos', roles: ['admin', 'gestor'] },
+    { to: '/admin/alumnos', icon: Users, label: 'Alumnos', roles: ['admin', 'gestor'] },
+    { to: '/admin/configuracion', icon: Settings, label: 'Configuración', roles: ['admin'] },
+    { to: '/admin/usuarios', icon: UserCog, label: 'Gestores', roles: ['admin'] },
+  ].filter(link => link.roles.includes(user?.role));
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b flex items-center justify-between">
-        {sidebarOpen ? (
+      <div className={`p-4 border-b flex items-center ${sidebarOpen ? 'justify-between' : 'justify-center'}`}>
+        {sidebarOpen && (
           <div className="overflow-hidden">
             <h1 className="text-lg font-bold text-indigo-600 truncate">Gestión Escuela</h1>
             <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{user?.role}</span>
-          </div>
-        ) : (
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center mx-auto">
-            <span className="text-white font-bold text-sm">G</span>
           </div>
         )}
         {/* Toggle button - desktop */}
