@@ -126,6 +126,22 @@ export default function Students() {
     setShowModal(true);
   };
 
+  const STATUS_CONFIG = {
+    active:   { label: 'Activo',      cls: 'bg-green-100 text-green-700' },
+    enrolled: { label: 'Matriculado', cls: 'bg-indigo-100 text-indigo-700' },
+    pending:  { label: 'Pendiente',   cls: 'bg-amber-100 text-amber-700' },
+    draft:    { label: 'Borrador',    cls: 'bg-gray-100 text-gray-500' },
+  };
+
+  const StatusBadge = ({ status }) => {
+    const cfg = STATUS_CONFIG[status] ?? { label: status ?? '—', cls: 'bg-gray-100 text-gray-500' };
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>
+        {cfg.label}
+      </span>
+    );
+  };
+
   const columns = [
     {
       key: 'firstName',
@@ -135,6 +151,11 @@ export default function Students() {
     },
     { key: 'email', label: 'Email', hideOnMobile: true, render: (s) => <span className="text-gray-500">{s.email}</span> },
     { key: 'dni', label: 'DNI', hideOnMobile: true, render: (s) => <span className="text-gray-500">{s.dni || '—'}</span> },
+    {
+      key: 'status',
+      label: 'Estado',
+      render: (s) => <StatusBadge status={s.status} />,
+    },
     {
       key: 'actions',
       label: '',
