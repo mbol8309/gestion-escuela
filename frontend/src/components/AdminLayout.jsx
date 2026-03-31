@@ -12,12 +12,12 @@ export default function AdminLayout() {
   const handleLogout = () => { logout(); navigate('/login'); };
 
   const links = [
-    { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-    { to: '/admin/cursos', icon: BookOpen, label: 'Cursos' },
-    { to: '/admin/alumnos', icon: Users, label: 'Alumnos' },
-    { to: '/admin/configuracion', icon: Settings, label: 'Configuración' },
-    ...(user?.role === 'admin' ? [{ to: '/admin/usuarios', icon: UserCog, label: 'Gestores' }] : []),
-  ];
+    { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true, roles: ['admin', 'gestor'] },
+    { to: '/admin/cursos', icon: BookOpen, label: 'Cursos', roles: ['admin', 'gestor'] },
+    { to: '/admin/alumnos', icon: Users, label: 'Alumnos', roles: ['admin', 'gestor'] },
+    { to: '/admin/configuracion', icon: Settings, label: 'Configuración', roles: ['admin'] },
+    { to: '/admin/usuarios', icon: UserCog, label: 'Gestores', roles: ['admin'] },
+  ].filter(link => link.roles.includes(user?.role));
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">

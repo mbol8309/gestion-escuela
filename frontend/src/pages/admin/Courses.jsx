@@ -8,6 +8,7 @@ import ResponsiveTable from '../../components/ResponsiveTable';
 import Pagination from '../../components/Pagination';
 import PageSizeSelector from '../../components/PageSizeSelector';
 import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 function Modal({ title, onClose, children }) {
   return (
@@ -26,6 +27,7 @@ function Modal({ title, onClose, children }) {
 export default function Courses() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('search') || '';
   const page = parseInt(searchParams.get('page') || '1');
@@ -110,9 +112,11 @@ export default function Courses() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Cursos</h1>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm">
-          <Plus size={18} /> Nuevo curso
-        </button>
+        {user?.role === 'admin' && (
+          <button onClick={openCreate} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm">
+            <Plus size={18} /> Nuevo curso
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow">
