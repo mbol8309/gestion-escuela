@@ -6,6 +6,7 @@ const Enrollment = require('./Enrollment');
 const DiplomaTemplate = require('./DiplomaTemplate');
 const Diploma = require('./Diploma');
 const AppConfig = require('./AppConfig');
+const ActivityLog = require('./ActivityLog');
 
 // Associations
 User.hasOne(Student, { foreignKey: 'userId' });
@@ -32,4 +33,5 @@ module.exports = {
   DiplomaTemplate,
   Diploma,
   AppConfig,
+  ActivityLog,
 };

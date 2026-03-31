@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { Enrollment, Student, Course } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
+const { logActivity } = require('../services/activityLogger');
 
 router.get('/', auth, async (req, res) => {
   try {
@@ -76,6 +77,7 @@ router.put('/:id/finish', auth, requireRole('admin', 'gestor'), async (req, res)
       finishedAt: new Date(),
       finishedBy: req.user.id,
     });
+    await logActivity('enrollment.finished', 'enrollment', enrollment.id, req.user.id, { studentId: enrollment.studentId, courseId: enrollment.courseId });
     res.json(enrollment);
   } catch (err) {
     res.status(500).json({ error: err.message });

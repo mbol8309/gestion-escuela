@@ -199,12 +199,13 @@ export default function Students() {
               value={studentStatus}
               onChange={(e) => setFilter('studentStatus', e.target.value)}
               className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              title="Estado de cuenta del alumno"
             >
-              <option value="enrolled">Matriculados</option>
-              <option value="draft">Borrador</option>
-              <option value="pending">Pendientes</option>
-              <option value="active">Activos</option>
-              <option value="all">Todos</option>
+              <option value="enrolled">Cuenta: Matriculados</option>
+              <option value="draft">Cuenta: Borrador</option>
+              <option value="pending">Cuenta: Pendientes</option>
+              <option value="active">Cuenta: Activos</option>
+              <option value="all">Cuenta: Todos</option>
             </select>
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -234,7 +235,7 @@ export default function Students() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Estado inscripción</label>
+                <label className="block text-xs text-gray-500 mb-1">Estado de inscripción (en curso)</label>
                 <select
                   value={enrollmentStatus}
                   onChange={(e) => setFilter('enrollmentStatus', e.target.value)}

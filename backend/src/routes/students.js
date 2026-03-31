@@ -5,6 +5,7 @@ const { Student, User, Enrollment, Course, AppConfig, sequelize } = require('../
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const { sendActivationEmail } = require('../services/emailService');
+const { logActivity } = require('../services/activityLogger');
 
 const getTTL = async () => {
   try {
@@ -46,6 +47,7 @@ router.get('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
     // Sin filtros de enrollment, NO incluir enrollments en la lista (muy lento con 10k+ registros)
     // Los enrollments se cargan solo en GET /api/students/:id
 
+    if (options.include) options.distinct = true;
     const { count, rows } = await Student.findAndCountAll(options);
     res.json({ total: count, page: parseInt(page), limit: parseInt(limit), data: rows });
   } catch (err) {
@@ -88,6 +90,7 @@ router.post('/', auth, requireRole('admin', 'gestor'), async (req, res) => {
     const full = await Student.findByPk(student.id, {
       include: [{ model: Enrollment, include: [Course] }],
     });
+    await logActivity('student.created', 'student', student.id, req.user.id, { email: student.email, name: `${student.firstName} ${student.lastName}` });
     res.status(201).json(full);
   } catch (err) {
     await t.rollback();
@@ -197,6 +200,7 @@ router.post('/:id/send-activation', auth, requireRole('admin', 'gestor'), async 
         fromName: fromNameCfg?.value || academyCfg?.value || 'Academia',
         fromAddress: fromAddrCfg?.value || 'noreply@miguesync.es',
       });
+      await logActivity('activation.sent', 'student', student.id, req.user.id, { email: student.email });
       res.json({ message: 'Activation email sent' });
     } catch (err) {
       res.status(500).json({ error: 'Email error: ' + err.message });
