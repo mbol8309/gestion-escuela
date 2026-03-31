@@ -195,18 +195,20 @@ export default function Students() {
                 className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
               />
             </div>
-            <select
-              value={studentStatus}
-              onChange={(e) => setFilter('studentStatus', e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              title="Estado de cuenta del alumno"
-            >
-              <option value="enrolled">Cuenta: Matriculados</option>
-              <option value="draft">Cuenta: Borrador</option>
-              <option value="pending">Cuenta: Pendientes</option>
-              <option value="active">Cuenta: Activos</option>
-              <option value="all">Cuenta: Todos</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 whitespace-nowrap">Estado alumno:</span>
+              <select
+                value={studentStatus}
+                onChange={(e) => setFilter('studentStatus', e.target.value)}
+                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="enrolled">Matriculado</option>
+                <option value="draft">Borrador</option>
+                <option value="pending">Pendiente</option>
+                <option value="active">Activo</option>
+                <option value="all">Todos</option>
+              </select>
+            </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm ${showFilters || courseId || enrollmentStatus || startDateFrom || startDateTo ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'hover:bg-gray-50'}`}
@@ -235,14 +237,14 @@ export default function Students() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Estado de inscripción (en curso)</label>
+                <label className="block text-xs text-gray-500 mb-1">Estado inscripción en curso</label>
                 <select
                   value={enrollmentStatus}
                   onChange={(e) => setFilter('enrollmentStatus', e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 >
                   <option value="">Todos</option>
-                  <option value="enrolled">Activos (enrolled)</option>
+                  <option value="enrolled">Activos</option>
                   <option value="finished">Terminados</option>
                   <option value="pending">Pendientes</option>
                   <option value="draft">Borrador</option>
