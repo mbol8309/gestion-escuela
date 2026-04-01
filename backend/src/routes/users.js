@@ -2,13 +2,29 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const { User } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
+const { Op } = require('sequelize');
 
 router.get('/', auth, requireRole('admin'), async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, role } = req.query;
     const limitN = Math.min(100, Math.max(1, parseInt(limit)));
     const offset = (Math.max(1, parseInt(page)) - 1) * limitN;
-    const { count, rows } = await User.findAndCountAll({ attributes: { exclude: ['passwordHash'] }, limit: limitN, offset });
+
+    const where = {};
+    // Por defecto solo admin y gestor (usuarios de administración)
+    if (role && ['admin', 'gestor'].includes(role)) {
+      where.role = role;
+    } else {
+      where.role = { [Op.in]: ['admin', 'gestor'] };
+    }
+
+    const { count, rows } = await User.findAndCountAll({
+      where,
+      attributes: { exclude: ['passwordHash'] },
+      limit: limitN,
+      offset,
+      order: [['role', 'ASC'], ['createdAt', 'ASC']],
+    });
     res.json({ total: count, page: parseInt(page), limit: limitN, data: rows });
   } catch (err) {
     console.error(`[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`, err.message);
@@ -19,6 +35,7 @@ router.get('/', auth, requireRole('admin'), async (req, res) => {
 router.post('/', auth, requireRole('admin'), async (req, res) => {
   const { email, password, firstName, lastName, role = 'gestor' } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
+  if (!['admin', 'gestor'].includes(role)) return res.status(400).json({ error: 'Rol inválido' });
   try {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await User.create({ email, passwordHash, role, firstName, lastName, active: true });
@@ -36,12 +53,13 @@ router.put('/:id', auth, requireRole('admin'), async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ error: 'Not found' });
-    if (user.role === 'admin') return res.status(403).json({ error: 'No se puede editar un administrador' });
-    const { password, email, firstName, lastName } = req.body;
+    if (user.role === 'admin' && req.user.id !== user.id) return res.status(403).json({ error: 'No se puede editar otro administrador' });
+    const { password, email, firstName, lastName, role } = req.body;
     const updates = {};
     if (email) updates.email = email;
     if (firstName !== undefined) updates.firstName = firstName;
     if (lastName !== undefined) updates.lastName = lastName;
+    if (role && ['admin', 'gestor'].includes(role)) updates.role = role;
     if (password) updates.passwordHash = await bcrypt.hash(password, 10);
     await user.update(updates);
     res.json({ id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName });
