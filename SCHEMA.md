@@ -69,14 +69,27 @@
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | id | UUID | PK |
-| courseId | UUID FK | Course al que pertenece |
-| name | STRING | ej: "Diploma de Asistencia", "Título Oficial" |
-| type | STRING | enrollment_form \| diploma |
+| name | STRING | ej: "Diploma de Asistencia", "Ficha de Inscripción" |
+| scope | STRING | `global` (todos los cursos) \| `course` (cursos asignados) |
 | pdfPath | STRING | path a la plantilla PDF base |
-| fields | JSON | [{field, x, y, fontSize, color}] |
+| fields | JSON | schema pdfme con posición de campos |
 
-**Campos disponibles en plantillas:**
+**Reglas de scope:**
+- `global` → disponible para todos los cursos (ej: ficha de inscripción)
+- `course` → hay que asignarla a cursos via CourseTemplates
+- Una global puede convertirse a course, pero no al revés
+- Al generar diploma: se muestran globales + las del curso específico
+
+**Campos disponibles en plantillas (variables pdfme):**
 `firstName`, `lastName`, `fullName`, `dni`, `email`, `phone`, `courseName`, `startDate`, `endDate`, `finishedAt`, `academyName`
+
+### CourseTemplates (tabla pivot N:M)
+| Campo | Tipo | Notas |
+|-------|------|-------|
+| courseId | UUID FK | Course |
+| templateId | UUID FK | DiplomaTemplate |
+
+Solo aplica a plantillas scope=course. Las globales se aplican automáticamente.
 
 ### Diploma (PDF generado)
 | Campo | Tipo | Notas |
