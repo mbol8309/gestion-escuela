@@ -152,7 +152,10 @@ async function getInputsForEnrollment(enrollment) {
     dni: student.dni || '',
     email: student.email || '',
     phone: student.phone || '',
+    address: student.address || '',
+    birthDate: student.birthDate ? new Date(student.birthDate).toLocaleDateString('es-ES') : '',
     courseName: course?.name || '',
+    courseSummary: course?.summary ? course.summary.replace(/<[^>]*>/g, '') : '',
     startDate: enrollment.startDate ? new Date(enrollment.startDate).toLocaleDateString('es-ES') : '',
     endDate: enrollment.endDate ? new Date(enrollment.endDate).toLocaleDateString('es-ES') : '',
     finishedAt: enrollment.finishedAt ? new Date(enrollment.finishedAt).toLocaleDateString('es-ES') : '',
@@ -160,23 +163,56 @@ async function getInputsForEnrollment(enrollment) {
   };
 }
 
+function resolveVariables(text, data) {
+  if (!text || typeof text !== 'string') return text;
+  return text
+    .replace(/\{firstName\}/g, data.firstName || '')
+    .replace(/\{lastName\}/g, data.lastName || '')
+    .replace(/\{fullName\}/g, data.fullName || '')
+    .replace(/\{dni\}/g, data.dni || '')
+    .replace(/\{email\}/g, data.email || '')
+    .replace(/\{phone\}/g, data.phone || '')
+    .replace(/\{address\}/g, data.address || '')
+    .replace(/\{birthDate\}/g, data.birthDate || '')
+    .replace(/\{courseName\}/g, data.courseName || '')
+    .replace(/\{courseSummary\}/g, data.courseSummary || '')
+    .replace(/\{startDate\}/g, data.startDate || '')
+    .replace(/\{endDate\}/g, data.endDate || '')
+    .replace(/\{finishedAt\}/g, data.finishedAt || '')
+    .replace(/\{academyName\}/g, data.academyName || '');
+}
+
+function resolveSchemas(schemas, data) {
+  return schemas.map(page =>
+    page.map(field => ({
+      ...field,
+      content: resolveVariables(field.content, data),
+    }))
+  );
+}
+
 async function generatePDFBuffer(templateId, enrollmentId) {
   const template = await DiplomaTemplate.findByPk(templateId);
   if (!template) throw new Error('Template not found');
-  const enrollment = await Enrollment.findByPk(enrollmentId, { include: [Student, Course] });
+  const enrollment = await Enrollment.findByPk(enrollmentId, {
+    include: [Student, { model: Course, attributes: ['id', 'name', 'summary'] }]
+  });
   if (!enrollment) throw new Error('Enrollment not found');
 
   const filePath = path.join(TEMPLATES_DIR, template.pdfPath);
   if (!fs.existsSync(filePath)) throw new Error('Template PDF file not found');
 
+  const inputs = await getInputsForEnrollment(enrollment);
   const schemas = template.fields || [[]];
+  const resolvedSchemas = resolveSchemas(schemas, inputs);
+
   const pdfmeTemplate = {
     basePdf: fs.readFileSync(filePath),
-    schemas,
+    schemas: resolvedSchemas,
   };
 
-  const inputs = [await getInputsForEnrollment(enrollment)];
-  const pdf = await generate({ template: pdfmeTemplate, inputs });
+  const pdfInputs = [inputs];
+  const pdf = await generate({ template: pdfmeTemplate, inputs: pdfInputs });
   return { buffer: Buffer.from(pdf), enrollment, template };
 }
 

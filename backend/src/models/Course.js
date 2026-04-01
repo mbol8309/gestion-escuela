@@ -12,6 +12,7 @@ const Course = sequelize.define('Course', {
   logo: { type: DataTypes.STRING },
   createdBy: { type: DataTypes.UUID },
   active: { type: DataTypes.BOOLEAN, defaultValue: true },
+  summary: { type: DataTypes.TEXT, allowNull: true },
 });
 
 module.exports = Course;

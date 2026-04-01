@@ -4,6 +4,39 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Designer } from '@pdfme/ui';
 import { ArrowLeft, Save, Globe, BookOpen, Download } from 'lucide-react';
 import api from '../../services/api';
+import { useToast } from '../../components/ToastProvider';
+
+const TEMPLATE_VARIABLES = [
+  {
+    category: 'Alumno',
+    vars: [
+      { key: '{firstName}', label: 'Nombre' },
+      { key: '{lastName}', label: 'Apellidos' },
+      { key: '{fullName}', label: 'Nombre completo' },
+      { key: '{dni}', label: 'DNI/NIE' },
+      { key: '{email}', label: 'Email' },
+      { key: '{phone}', label: 'Teléfono' },
+      { key: '{address}', label: 'Dirección' },
+      { key: '{birthDate}', label: 'Fecha de nacimiento' },
+    ]
+  },
+  {
+    category: 'Curso',
+    vars: [
+      { key: '{courseName}', label: 'Nombre del curso' },
+      { key: '{courseSummary}', label: 'Resumen del curso' },
+      { key: '{startDate}', label: 'Fecha de inicio' },
+      { key: '{endDate}', label: 'Fecha de fin' },
+      { key: '{finishedAt}', label: 'Fecha de finalización' },
+    ]
+  },
+  {
+    category: 'Academia',
+    vars: [
+      { key: '{academyName}', label: 'Nombre academia' },
+    ]
+  }
+];
 
 export default function TemplateEditorV2() {
   const { id: templateId } = useParams();
@@ -11,6 +44,7 @@ export default function TemplateEditorV2() {
   const queryClient = useQueryClient();
   const designerRef = useRef(null);
   const designer = useRef(null);
+  const { toast } = useToast();
 
   const [savedMsg, setSavedMsg] = useState('');
   const [selectedCourseIds, setSelectedCourseIds] = useState([]);
@@ -162,8 +196,29 @@ export default function TemplateEditorV2() {
       </div>
 
       {/* Designer */}
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        <div ref={designerRef} style={{ height: '600px', width: '100%' }} />
+      <div className="bg-white rounded-xl shadow overflow-hidden flex">
+        <div ref={designerRef} style={{ height: '600px', flex: 1, minWidth: 0 }} />
+        <div className="w-56 border-l bg-gray-50 p-3 overflow-y-auto flex-shrink-0" style={{ height: '600px' }}>
+          <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Variables disponibles</p>
+          <p className="text-xs text-gray-400 mb-3">Click para copiar. Pega el texto en un campo del diseñador.</p>
+          {TEMPLATE_VARIABLES.map(group => (
+            <div key={group.category} className="mb-4">
+              <p className="text-xs font-semibold text-gray-600 mb-1">{group.category}</p>
+              <div className="space-y-1">
+                {group.vars.map(v => (
+                  <button
+                    key={v.key}
+                    onClick={() => { navigator.clipboard.writeText(v.key); toast(`${v.key} copiado`); }}
+                    className="w-full text-left px-2 py-1 rounded text-xs hover:bg-indigo-50 hover:text-indigo-700 flex justify-between items-center group"
+                  >
+                    <span className="text-gray-500">{v.label}</span>
+                    <code className="font-mono text-indigo-600 text-xs">{v.key}</code>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Cursos asignados (solo scope=course) */}

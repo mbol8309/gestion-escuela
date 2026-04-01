@@ -9,6 +9,7 @@ import Pagination from '../../components/Pagination';
 import PageSizeSelector from '../../components/PageSizeSelector';
 import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import RichTextEditor from '../../components/RichTextEditor';
 
 function Modal({ title, onClose, children }) {
   return (
@@ -38,6 +39,7 @@ export default function Courses() {
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [summaryValue, setSummaryValue] = useState('');
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm();
 
   const setFilter = (key, value) => {
@@ -67,18 +69,21 @@ export default function Courses() {
   const openCreate = () => {
     setEditing(null);
     reset({ name: '', description: '' });
+    setSummaryValue('');
     setShowModal(true);
   };
 
   const openEdit = (c) => {
     setEditing(c);
     reset({ name: c.name, description: c.description || '' });
+    setSummaryValue(c.summary || '');
     setShowModal(true);
   };
 
   const onSubmit = async (data) => {
-    if (editing) await api.put(`/courses/${editing.id}`, data);
-    else await api.post('/courses', data);
+    const payload = { ...data, summary: summaryValue };
+    if (editing) await api.put(`/courses/${editing.id}`, payload);
+    else await api.post('/courses', payload);
     setShowModal(false);
     queryClient.invalidateQueries({ queryKey: ['courses'] });
   };
@@ -155,6 +160,14 @@ export default function Courses() {
             <div>
               <label className="block text-sm font-medium mb-1">Descripción</label>
               <textarea {...register('description')} rows={3} className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Resumen del curso</label>
+              <RichTextEditor
+                value={summaryValue}
+                onChange={(val) => setSummaryValue(val)}
+              />
+              <p className="text-xs text-gray-400 mt-1">Habilidades adquiridas, contenido del curso... Disponible como variable en plantillas de diplomas.</p>
             </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowModal(false)} className="flex-1 border rounded-lg py-2 text-sm hover:bg-gray-50">Cancelar</button>
