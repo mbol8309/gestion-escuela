@@ -91,3 +91,31 @@ cd frontend && npm run dev     # Vite dev server
 cd frontend && npm run build   # build producción
 cd frontend && npm test -- --run  # Vitest tests
 ```
+
+## Variables disponibles en plantillas pdfme
+
+Cuando el gestor diseña una plantilla en el editor pdfme, puede añadir campos de texto con estas variables. Al generar el PDF, se sustituyen por los datos reales del alumno/curso:
+
+### Del alumno (Student)
+- `firstName` — nombre
+- `lastName` — apellidos  
+- `fullName` — nombre completo (firstName + lastName)
+- `dni` — DNI/NIE
+- `email` — email
+- `phone` — teléfono
+- `address` — dirección
+- `birthDate` — fecha de nacimiento (formato dd/mm/yyyy)
+
+### Del curso/inscripción (Enrollment + Course)
+- `courseName` — nombre del curso
+- `startDate` — fecha de inicio del curso (dd/mm/yyyy)
+- `endDate` — fecha de fin prevista (dd/mm/yyyy)
+- `finishedAt` — fecha real de finalización (dd/mm/yyyy)
+
+### De la academia (AppConfig)
+- `academyName` — nombre de la academia
+
+### TODO pendiente
+- El editor pdfme debe mostrar estas variables como opciones al añadir un campo de texto
+- El generador debe sustituir las variables en el schema de pdfme antes de generar
+- Añadir más variables si se necesitan (ej: `registrationNumber` para número de diploma correlativo)
