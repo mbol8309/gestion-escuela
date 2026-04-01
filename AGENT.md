@@ -119,3 +119,9 @@ Cuando el gestor diseña una plantilla en el editor pdfme, puede añadir campos 
 - El editor pdfme debe mostrar estas variables como opciones al añadir un campo de texto
 - El generador debe sustituir las variables en el schema de pdfme antes de generar
 - Añadir más variables si se necesitan (ej: `registrationNumber` para número de diploma correlativo)
+
+## Generación de diplomas (actualizado)
+- Ruta correcta: `POST /api/templates/generate` con body `{ templateId, enrollmentId }`
+- El frontend usa `axios.post` con `responseType: 'blob'` para descargar el PDF
+- Mostrar TODAS las plantillas del curso (globales + asignadas), no filtrar por `type`
+- El campo `type` ya no existe — usar `scope` (global | course)
