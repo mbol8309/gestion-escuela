@@ -6,7 +6,7 @@ import { useToast } from '../../components/ToastProvider';
 import { useAuthStore } from '../../store/authStore';
 import Pagination from '../../components/Pagination';
 import PageSizeSelector from '../../components/PageSizeSelector';
-import { Plus, Trash2, X, Shield } from 'lucide-react';
+import { Plus, Trash2, X, Shield, Pencil } from 'lucide-react';
 
 const ROLE_LABELS = { admin: 'Administrador', gestor: 'Gestor' };
 const ROLE_COLORS = { admin: 'bg-purple-100 text-purple-700', gestor: 'bg-blue-100 text-blue-700' };
@@ -34,6 +34,7 @@ export default function UsersPage() {
   const [form, setForm] = useState({ email: '', firstName: '', lastName: '', password: '', role: 'gestor' });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
 
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '10');
@@ -56,18 +57,34 @@ export default function UsersPage() {
   const users = usersData?.data || [];
   const total = usersData?.total || 0;
 
+  const openEdit = (u) => {
+    setEditingUser(u);
+    setForm({ email: u.email, firstName: u.firstName || '', lastName: u.lastName || '', password: '', role: u.role });
+    setFormError('');
+    setShowModal(true);
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.password) { setFormError('Email y contraseña son requeridos'); return; }
+    if (!form.email) { setFormError('Email es requerido'); return; }
+    if (!editingUser && !form.password) { setFormError('La contraseña es requerida'); return; }
     setSaving(true); setFormError('');
     try {
-      await api.post('/users', form);
-      toast('Usuario creado correctamente');
+      if (editingUser) {
+        const updates = { email: form.email, firstName: form.firstName, lastName: form.lastName, role: form.role };
+        if (form.password) updates.password = form.password;
+        await api.put(`/users/${editingUser.id}`, updates);
+        toast('Usuario actualizado');
+      } else {
+        await api.post('/users', form);
+        toast('Usuario creado correctamente');
+      }
       setShowModal(false);
+      setEditingUser(null);
       setForm({ email: '', firstName: '', lastName: '', password: '', role: 'gestor' });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (err) {
-      setFormError(err.response?.data?.error || 'Error al crear usuario');
+      setFormError(err.response?.data?.error || 'Error al guardar usuario');
     } finally { setSaving(false); }
   };
 
@@ -90,7 +107,7 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-800">Usuarios Administración</h1>
         </div>
         <button
-          onClick={() => { setForm({ email: '', firstName: '', lastName: '', password: '', role: 'gestor' }); setShowModal(true); }}
+          onClick={() => { setEditingUser(null); setForm({ email: '', firstName: '', lastName: '', password: '', role: 'gestor' }); setFormError(''); setShowModal(true); }}
           className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm"
         >
           <Plus size={16} /> Nuevo usuario
@@ -144,15 +161,16 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {u.role !== 'admin' && u.id !== currentUser?.id && (
-                        <button
-                          onClick={() => handleDelete(u.id, u.email)}
-                          className="text-red-400 hover:text-red-600 p-1"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={16} />
+                      <div className="flex gap-1 justify-end">
+                        <button onClick={() => openEdit(u)} className="text-gray-400 hover:text-indigo-600 p-1" title="Editar">
+                          <Pencil size={16} />
                         </button>
-                      )}
+                        {u.role !== 'admin' && u.id !== currentUser?.id && (
+                          <button onClick={() => handleDelete(u.id, u.email)} className="text-red-400 hover:text-red-600 p-1" title="Eliminar">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -172,7 +190,7 @@ export default function UsersPage() {
       </div>
 
       {showModal && (
-        <Modal title="Nuevo usuario administración" onClose={() => setShowModal(false)}>
+        <Modal title={editingUser ? `Editar: ${editingUser.email}` : 'Nuevo usuario administración'} onClose={() => { setShowModal(false); setEditingUser(null); }}>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -192,8 +210,9 @@ export default function UsersPage() {
                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Contraseña *</label>
+              <label className="block text-sm font-medium mb-1">{editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña *'}</label>
               <input type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})}
+                placeholder={editingUser ? 'Dejar vacío para no cambiar' : ''}
                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
             </div>
             <div>
@@ -208,7 +227,7 @@ export default function UsersPage() {
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowModal(false)} className="flex-1 border rounded-lg py-2 text-sm hover:bg-gray-50">Cancelar</button>
               <button type="submit" disabled={saving} className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm hover:bg-indigo-700 disabled:opacity-60">
-                {saving ? 'Creando...' : 'Crear usuario'}
+                {saving ? 'Guardando...' : editingUser ? 'Guardar cambios' : 'Crear usuario'}
               </button>
             </div>
           </form>

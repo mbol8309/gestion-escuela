@@ -17,9 +17,17 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM('admin', 'gestor', 'alumno'),
+    type: DataTypes.STRING,
     allowNull: false,
     defaultValue: 'alumno',
+  },
+  firstName: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  lastName: {
+    type: DataTypes.STRING,
+    allowNull: true,
   },
   studentId: {
     type: DataTypes.UUID,
