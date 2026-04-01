@@ -9,8 +9,8 @@ const {
 
 // GET /api/templates/:id/preview
 router.get('/:id/preview', auth, previewTemplate);
-// GET /api/templates/:id/pdf (iframe src)
-router.get('/:id/pdf', auth, getPdf);
+// GET /api/templates/:id/pdf (iframe src — sin auth para poder usarlo en iframes)
+router.get('/:id/pdf', getPdf);
 // PUT /api/templates/:id/fields
 router.put('/:id/fields', auth, requireRole('admin', 'gestor'), updateFields);
 // GET /api/templates/:id/generate/:enrollmentId
