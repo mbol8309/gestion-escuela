@@ -97,4 +97,81 @@ router.delete('/:id', auth, requireRole('admin', 'gestor'), async (req, res) => 
   }
 });
 
+// POST /api/enrollments/batch — batch actions
+router.post('/batch', auth, requireRole('admin', 'gestor'), async (req, res) => {
+  try {
+    const { enrollmentIds = [], action, templateId } = req.body;
+    if (!enrollmentIds.length) return res.status(400).json({ error: 'No enrollmentIds' });
+
+    if (action === 'finish') {
+      for (const id of enrollmentIds) {
+        const enrollment = await Enrollment.findByPk(id);
+        if (enrollment && enrollment.status !== 'finished') {
+          await enrollment.update({ status: 'finished', finishedAt: new Date(), finishedBy: req.user.id });
+        }
+      }
+      return res.json({ message: `${enrollmentIds.length} enrollments finished` });
+    }
+
+    if (action === 'generate-diplomas') {
+      if (!templateId) return res.status(400).json({ error: 'templateId required for generate-diplomas' });
+      // Delegate to generate-batch — redirect to template controller
+      const archiver = require('archiver');
+      const { generate } = require('@pdfme/generator');
+      const { DiplomaTemplate, Student: StudentModel } = require('../models');
+      const path = require('path');
+      const fs = require('fs');
+      const TEMPLATES_DIR = path.resolve(__dirname, '../../../uploads/templates');
+
+      const template = await DiplomaTemplate.findByPk(templateId);
+      if (!template) return res.status(404).json({ error: 'Template not found' });
+
+      const filePath = path.join(TEMPLATES_DIR, template.pdfPath);
+      if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'PDF file not found' });
+
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', 'attachment; filename="diplomas.zip"');
+
+      const archive = archiver('zip', { zlib: { level: 6 } });
+      archive.pipe(res);
+
+      for (const enrollmentId of enrollmentIds) {
+        try {
+          const enrollment = await Enrollment.findByPk(enrollmentId, { include: [StudentModel, Course] });
+          if (!enrollment) continue;
+          const pdfmeTemplate = {
+            basePdf: fs.readFileSync(filePath),
+            schemas: template.fields || [[]],
+          };
+          const student = enrollment.Student;
+          const course = enrollment.Course;
+          const inputs = [{
+            fullName: `${student?.firstName || ''} ${student?.lastName || ''}`.trim(),
+            firstName: student?.firstName || '',
+            lastName: student?.lastName || '',
+            dni: student?.dni || '',
+            email: student?.email || '',
+            phone: student?.phone || '',
+            courseName: course?.name || '',
+            startDate: enrollment.startDate ? new Date(enrollment.startDate).toLocaleDateString('es-ES') : '',
+            endDate: enrollment.endDate ? new Date(enrollment.endDate).toLocaleDateString('es-ES') : '',
+            finishedAt: enrollment.finishedAt ? new Date(enrollment.finishedAt).toLocaleDateString('es-ES') : '',
+            academyName: '',
+          }];
+          const pdf = await generate({ template: pdfmeTemplate, inputs });
+          const fname = `diploma_${student?.lastName || 'alumno'}_${student?.firstName || ''}.pdf`.replace(/[^a-z0-9_\-.]/gi, '_');
+          archive.append(Buffer.from(pdf), { name: fname });
+        } catch (e) {
+          console.error(`Batch error for ${enrollmentId}:`, e.message);
+        }
+      }
+      return archive.finalize();
+    }
+
+    res.status(400).json({ error: 'Unknown action' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

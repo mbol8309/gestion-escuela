@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { LayoutDashboard, BookOpen, Users, LogOut, Menu, X, ChevronLeft, Settings, UserCog, ScrollText } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, LogOut, Menu, X, ChevronLeft, Settings, UserCog, ScrollText, FileText } from 'lucide-react';
 
 export default function AdminLayout() {
   const { user, logout } = useAuthStore();
@@ -15,6 +15,7 @@ export default function AdminLayout() {
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true, roles: ['admin', 'gestor'] },
     { to: '/admin/cursos', icon: BookOpen, label: 'Cursos', roles: ['admin', 'gestor'] },
     { to: '/admin/alumnos', icon: Users, label: 'Alumnos', roles: ['admin', 'gestor'] },
+    { to: '/admin/plantillas', icon: FileText, label: 'Plantillas', roles: ['admin', 'gestor'] },
     { to: '/admin/configuracion', icon: Settings, label: 'Configuración', roles: ['admin'] },
     { to: '/admin/usuarios', icon: UserCog, label: 'Gestores', roles: ['admin'] },
     { to: '/admin/logs', icon: ScrollText, label: 'Logs', roles: ['admin'] },

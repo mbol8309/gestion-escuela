@@ -10,7 +10,8 @@ import Enrollments from '../pages/admin/Enrollments';
 import StudentDetail from '../pages/admin/StudentDetail';
 import CourseDetail from '../pages/admin/CourseDetail';
 import ConfigPage from '../pages/admin/ConfigPage';
-import TemplateEditor from '../pages/admin/TemplateEditor';
+import Templates from '../pages/admin/Templates';
+import TemplateEditorV2 from '../pages/admin/TemplateEditorV2';
 import UsersPage from '../pages/admin/UsersPage';
 import LogsPage from '../pages/admin/LogsPage';
 import MyCourses from '../pages/portal/MyCourses';
@@ -40,7 +41,8 @@ export default function AppRouter() {
           <Route path="alumnos" element={<Students />} />
           <Route path="alumnos/:id" element={<StudentDetail />} />
           <Route path="cursos/:id" element={<CourseDetail />} />
-          <Route path="cursos/:id/plantillas/:templateId" element={<TemplateEditor />} />
+          <Route path="plantillas" element={<Templates />} />
+          <Route path="plantillas/:id/editor" element={<TemplateEditorV2 />} />
           <Route path="inscripciones" element={<Enrollments />} />
           <Route path="configuracion" element={<ConfigPage />} />
           <Route path="usuarios" element={<UsersPage />} />

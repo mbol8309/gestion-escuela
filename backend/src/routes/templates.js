@@ -1,19 +1,34 @@
 const router = require('express').Router();
 const { auth, requireRole } = require('../middleware/auth');
 const {
-  previewTemplate,
+  listTemplates,
+  createTemplate,
+  getTemplate,
+  updateTemplate,
+  deleteTemplate,
+  assignCourses,
   getPdf,
-  updateFields,
-  generatePDF,
+  generateSingle,
+  generateBatch,
 } = require('../controllers/templateController');
 
-// GET /api/templates/:id/preview
-router.get('/:id/preview', auth, previewTemplate);
-// GET /api/templates/:id/pdf (iframe src — sin auth para poder usarlo en iframes)
+// List all templates
+router.get('/', auth, listTemplates);
+// Create template (with PDF upload)
+router.post('/', auth, requireRole('admin', 'gestor'), ...createTemplate);
+// Generate single PDF — must be before /:id
+router.post('/generate', auth, generateSingle);
+// Generate batch ZIP — must be before /:id
+router.post('/generate-batch', auth, generateBatch);
+// Get single template
+router.get('/:id', auth, getTemplate);
+// Update template (name, scope, fields)
+router.put('/:id', auth, requireRole('admin', 'gestor'), updateTemplate);
+// Delete template
+router.delete('/:id', auth, requireRole('admin', 'gestor'), deleteTemplate);
+// Assign courses to template
+router.post('/:id/courses', auth, requireRole('admin', 'gestor'), assignCourses);
+// Serve PDF (no auth for iframe)
 router.get('/:id/pdf', getPdf);
-// PUT /api/templates/:id/fields
-router.put('/:id/fields', auth, requireRole('admin', 'gestor'), updateFields);
-// GET /api/templates/:id/generate/:enrollmentId
-router.get('/:id/generate/:enrollmentId', auth, generatePDF);
 
 module.exports = router;

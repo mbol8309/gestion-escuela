@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { Course, Enrollment, DiplomaTemplate, Student } = require('../models');
 const { auth, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
-const { uploadTemplate, listTemplates } = require('../controllers/templateController');
+const { uploadTemplateForCourse, listCourseTemplates } = require('../controllers/templateController');
 
 router.get('/', auth, async (req, res) => {
   try {
@@ -71,7 +71,7 @@ router.delete('/:id', auth, requireRole('admin'), async (req, res) => {
 });
 
 // Templates
-router.post('/:id/templates', auth, requireRole('admin', 'gestor'), ...uploadTemplate);
-router.get('/:id/templates', auth, listTemplates);
+router.post('/:id/templates', auth, requireRole('admin', 'gestor'), ...uploadTemplateForCourse);
+router.get('/:id/templates', auth, listCourseTemplates);
 
 module.exports = router;
