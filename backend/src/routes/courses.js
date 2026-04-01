@@ -34,7 +34,7 @@ router.get('/:id', auth, async (req, res) => {
 
     // Curso básico + plantillas (rápido)
     const course = await Course.findByPk(req.params.id, {
-      include: [{ model: DiplomaTemplate, attributes: ['id', 'name', 'type'] }],
+      include: [{ model: DiplomaTemplate, as: 'Templates', attributes: ['id', 'name', 'scope'] }],
     });
     if (!course) return res.status(404).json({ error: 'Not found' });
 
