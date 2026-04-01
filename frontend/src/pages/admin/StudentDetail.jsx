@@ -45,23 +45,36 @@ function DiplomaModal({ enrollment, onClose }) {
     enabled: !!courseId,
   });
 
-  const downloadDiploma = (templateId) => {
-    const url = `/api/templates/${templateId}/generate/${enrollment.id}`;
-    window.open(url, '_blank');
+  const downloadDiploma = async (templateId) => {
+    try {
+      const res = await import('../../services/api.js').then(m => m.default.post('/templates/generate', {
+        templateId,
+        enrollmentId: enrollment.id,
+      }, { responseType: 'blob' }));
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `diploma-${enrollment.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch(err) {
+      alert('Error al generar diploma: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   return (
     <Modal title="Generar diploma" onClose={onClose}>
       {isLoading ? (
         <p className="text-gray-400 text-sm text-center py-4">Cargando plantillas...</p>
-      ) : templates.filter((t) => t.type === 'diploma').length === 0 ? (
+      ) : templates.length === 0 ? (
         <p className="text-gray-400 text-sm text-center py-6">
           No hay plantillas de diploma para este curso.<br />
           Puedes añadir una desde el detalle del curso.
         </p>
       ) : (
         <div className="space-y-2">
-          {templates.filter((t) => t.type === 'diploma').map((t) => (
+          {templates.map((t) => (
             <button
               key={t.id}
               onClick={() => downloadDiploma(t.id)}
